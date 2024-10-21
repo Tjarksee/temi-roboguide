@@ -6,4 +6,7 @@
     <string name="btnCancelSpeak" translatable="false">Cancel Speak</string>
     <string name="btnGotoHomeBase" translatable="false">Goto Home Base</string>
     <string name="btnExit" translatable="false">Exit App</string>
+    <string name="Continue">Weiter</string>
+    <string name="secondHeading">Wie hat es ihenen gefallen?</string>
+    <string name="Heading">Ende der Fuehrung</string>
 </resources>
