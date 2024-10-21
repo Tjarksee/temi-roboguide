@@ -15,7 +15,8 @@ import java.io.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermissionResultListener {
+class
+MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermissionResultListener {
     private var mRobot: Robot? = null
     private lateinit var database: DatabaseHelper
 

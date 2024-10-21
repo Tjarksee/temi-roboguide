@@ -1,9 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">RoboGuide</string>
-
-    <string name="btnSpeakHelloWorld" translatable="false">Hello World</string>
-    <string name="btnSpeakLocations" translatable="false">Read locations</string>
-    <string name="btnCancelSpeak" translatable="false">Cancel Speak</string>
-    <string name="btnGotoHomeBase" translatable="false">Goto Home Base</string>
-    <string name="btnExit" translatable="false">Exit App</string>
+    <string name="willkommen">Willkommen</string>
+    <string name="choose_guide_type">Wählen Sie die Art der Führung</string>
+    <string name="explanation_type">Erklärungsart:</string>
+    <string name="v_short">Kurz</string>
+    <string name="v_long">Lang</string>
+    <string name="detail_level">Detaillierungsgrad:</string>
+    <string name="simple">Einfach</string>
+    <string name="detailed">Ausführlich</string>
+    <string name="individual">Individuell</string>
+    <string name="start">Start</string>
+    <string name="zur_ck">Zurück</string>
+    <string name="exit">Exit</string>
+    <string name="skip">Skip</string>
+    <string name="pause">Pause</string>
+    <string name="beschreibung_des_aktuellen_bereichs">Beschreibung des aktuellen Bereichs</string>
+    <string name="aktueller_bereich_bereich_1">Aktueller Bereich: Bereich 1</string>
+    <string name="f_hrung">Führung</string>
 </resources>

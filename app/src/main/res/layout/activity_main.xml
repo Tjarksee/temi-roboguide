@@ -4,66 +4,166 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context=".MainActivity"
+    android:padding="24dp"
+    android:background="@color/white">
 
-    <Button
-        android:id="@+id/btnSpeakHelloWorld"
+    <TextView
+        android:id="@+id/tvWelcome"
         android:layout_width="wrap_content"
-        android:layout_height="@dimen/btnHeight"
-        android:drawableStart="@drawable/baseline_chat_24"
-        android:drawablePadding="@dimen/btnIconPadding"
-        android:text="@string/btnSpeakHelloWorld"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_height="wrap_content"
+        android:text="@string/willkommen"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:textColor="@color/black"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/btnSpeakLocations"
-        android:layout_width="wrap_content"
-        android:layout_height="@dimen/btnHeight"
-        android:drawableStart="@drawable/baseline_not_listed_location_24"
-        android:drawablePadding="@dimen/btnIconPadding"
-        android:text="@string/btnSpeakLocations"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        android:gravity="center"
+        android:layout_marginTop="16dp" />
+
+    <TextView
+        android:id="@+id/tvChooseGuideType"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/choose_guide_type"
+        android:textSize="20sp"
+        android:textColor="@color/black"
+        app:layout_constraintTop_toBottomOf="@+id/tvWelcome"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnSpeakHelloWorld" />
-
-    <Button
-        android:id="@+id/btnCancelSpeak"
-        android:layout_width="wrap_content"
-        android:layout_height="@dimen/btnHeight"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
-        android:drawableStart="@drawable/baseline_cancel_24"
-        android:drawablePadding="@dimen/btnIconPadding"
-        android:text="@string/btnCancelSpeak"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <Button
-        android:id="@+id/btnGotoHomeBase"
-        android:layout_width="wrap_content"
-        android:layout_height="@dimen/btnHeight"
-        android:layout_marginStart="16dp"
-        android:layout_marginBottom="16dp"
-        android:drawableStart="@drawable/baseline_home_24"
-        android:drawablePadding="@dimen/btnIconPadding"
-        android:text="@string/btnGotoHomeBase"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <Button
-        android:id="@+id/btnExitApp"
-        android:layout_width="wrap_content"
-        android:layout_height="@dimen/btnHeight"
-        android:layout_marginTop="92dp"
-        android:layout_marginEnd="16dp"
-        android:drawableEnd="@drawable/baseline_exit_to_app_24"
-        android:drawablePadding="@dimen/btnIconPadding"
-        android:text="@string/btnExit"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_marginTop="16dp"
+        android:gravity="center" />
+
+    <TableLayout
+        android:id="@+id/tableLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/tvChooseGuideType"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="32dp"
+        android:background="@drawable/table_background"
+        android:padding="16dp"
+        android:elevation="8dp"
+        android:gravity="center">
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/explanation_type"
+                android:textSize="18sp"
+                android:textColor="@color/black" />
+
+            <RadioGroup
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rbShort"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/v_short"
+                    android:textColor="@color/black"
+                    android:minWidth="100dp"
+                    android:minHeight="48dp"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/radio_button_background" />
+
+                <RadioButton
+                    android:id="@+id/rbLong"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/v_long"
+                    android:textColor="@color/black"
+                    android:minWidth="100dp"
+                    android:minHeight="48dp"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/radio_button_background" />
+            </RadioGroup>
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/detail_level"
+                android:textSize="18sp"
+                android:textColor="@color/black" />
+
+            <RadioGroup
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rbSimple"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/simple"
+                    android:textColor="@color/black"
+                    android:minWidth="100dp"
+                    android:minHeight="48dp"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/radio_button_background" />
+
+                <RadioButton
+                    android:id="@+id/rbDetailed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/detailed"
+                    android:textColor="@color/black"
+                    android:minWidth="100dp"
+                    android:minHeight="48dp"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/radio_button_background" />
+            </RadioGroup>
+        </TableRow>
+
+    </TableLayout>
+
+    <Button
+        android:id="@+id/btnIndividual"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/individual"
+        android:textColor="@android:color/white"
+        android:backgroundTint="@android:color/holo_blue_dark"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginBottom="24dp"
+        android:layout_marginStart="32dp"
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp" />
+
+    <Button
+        android:id="@+id/btnStart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/start"
+        android:textColor="@android:color/white"
+        android:backgroundTint="@android:color/holo_green_dark"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginBottom="24dp"
+        android:layout_marginEnd="32dp"
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
