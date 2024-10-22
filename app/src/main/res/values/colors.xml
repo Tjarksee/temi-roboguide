@@ -8,4 +8,5 @@
     <color name="button_background_pressed">#303F9F</color>
     <color name="radio_button_checked">#FFBB86FC</color>
     <color name="radio_button_unchecked">#E0E0E0</color>
+    <color name="selectedColor">#36df56</color>
 </resources>

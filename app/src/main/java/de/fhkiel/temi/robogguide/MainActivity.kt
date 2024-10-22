@@ -1,9 +1,9 @@
 package de.fhkiel.temi.robogguide
 
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
+import android.widget.RadioGroup
 import androidx.appcompat.app.AppCompatActivity
 import com.robotemi.sdk.Robot
 import com.robotemi.sdk.TtsRequest
@@ -16,17 +16,22 @@ import java.io.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class
-MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermissionResultListener {
+class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermissionResultListener {
     private var mRobot: Robot? = null
     private lateinit var database: DatabaseHelper
+
+    private var tourLengthGroupSelected = false
+    private var textLengthGroupSelected = false
 
     private val singleThreadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.home_screen)
 
+        val tourLengthGroup = findViewById<RadioGroup>(R.id.tourLengthRadioGroup)
+        val textLengthGroup = findViewById<RadioGroup>(R.id.textLengthRadioGroup)
+        val startTourButton = findViewById<Button>(R.id.startTour)
         // ---- DATABASE ACCESS ----
         val databaseName = "roboguide.db"
         database = DatabaseHelper(this, databaseName)
@@ -51,13 +56,21 @@ MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermissionRes
             e.printStackTrace()
         }
 
-        // let robot speak on button click
-        findViewById<Button>(R.id.btnStart).setOnClickListener {
-            val intent = Intent(this, ExecutionActivity::class.java)
-            startActivity(intent)
+        tourLengthGroup.setOnCheckedChangeListener { _, _ ->
+            tourLengthGroupSelected = true
+            checkIfBothSelected(startTourButton)
+        }
+        textLengthGroup.setOnCheckedChangeListener { _, _ ->
+            textLengthGroupSelected = true
+            checkIfBothSelected(startTourButton)
         }
 
+    }
 
+    private fun checkIfBothSelected(nextButton: Button) {
+        if (tourLengthGroupSelected && textLengthGroupSelected) {
+            nextButton.isEnabled = true
+        }
     }
 
     override fun onStart() {
