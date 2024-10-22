@@ -48,27 +48,6 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         } catch (e: IOException) {
             e.printStackTrace()
         }
-
-        // let robot speak on button click
-        findViewById<Button>(R.id.btnSpeakHelloWorld).setOnClickListener {
-            speakText("Hello World!")
-        }
-
-        findViewById<Button>(R.id.btnSpeakLocations).setOnClickListener {
-            speakLocations()
-        }
-
-        findViewById<Button>(R.id.btnCancelSpeak).setOnClickListener {
-            mRobot?.cancelAllTtsRequests()
-        }
-
-        findViewById<Button>(R.id.btnGotoHomeBase).setOnClickListener {
-            gotoHomeBase()
-        }
-
-        findViewById<Button>(R.id.btnExitApp).setOnClickListener {
-            finishAffinity()
-        }
     }
 
     override fun onStart() {
