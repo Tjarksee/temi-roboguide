@@ -3,6 +3,7 @@ package de.fhkiel.temi.robogguide
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
+import android.widget.RadioGroup
 import androidx.appcompat.app.AppCompatActivity
 import com.robotemi.sdk.Robot
 import com.robotemi.sdk.TtsRequest
@@ -19,12 +20,18 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
     private var mRobot: Robot? = null
     private lateinit var database: DatabaseHelper
 
+    private var tourLengthGroupSelected = false
+    private var textLengthGroupSelected = false
+
     private val singleThreadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.home_screen)
 
+        val tourLengthGroup = findViewById<RadioGroup>(R.id.tourLengthRadioGroup)
+        val textLengthGroup = findViewById<RadioGroup>(R.id.textLengthRadioGroup)
+        val startTourButton = findViewById<Button>(R.id.startTour)
         // ---- DATABASE ACCESS ----
         val databaseName = "roboguide.db"
         database = DatabaseHelper(this, databaseName)
@@ -49,25 +56,20 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
             e.printStackTrace()
         }
 
-        // let robot speak on button click
-        findViewById<Button>(R.id.btnSpeakHelloWorld).setOnClickListener {
-            speakText("Hello World!")
+        tourLengthGroup.setOnCheckedChangeListener { _, _ ->
+            tourLengthGroupSelected = true
+            checkIfBothSelected(startTourButton)
+        }
+        textLengthGroup.setOnCheckedChangeListener { _, _ ->
+            textLengthGroupSelected = true
+            checkIfBothSelected(startTourButton)
         }
 
-        findViewById<Button>(R.id.btnSpeakLocations).setOnClickListener {
-            speakLocations()
-        }
+    }
 
-        findViewById<Button>(R.id.btnCancelSpeak).setOnClickListener {
-            mRobot?.cancelAllTtsRequests()
-        }
-
-        findViewById<Button>(R.id.btnGotoHomeBase).setOnClickListener {
-            gotoHomeBase()
-        }
-
-        findViewById<Button>(R.id.btnExitApp).setOnClickListener {
-            finishAffinity()
+    private fun checkIfBothSelected(nextButton: Button) {
+        if (tourLengthGroupSelected && textLengthGroupSelected) {
+            nextButton.isEnabled = true
         }
     }
 
