@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">RoboGuide</string>
 
@@ -7,6 +6,9 @@
     <string name="btnCancelSpeak" translatable="false">Cancel Speak</string>
     <string name="btnGotoHomeBase" translatable="false">Goto Home Base</string>
     <string name="btnExit" translatable="false">Exit App</string>
+    <string name="Continue">Weiter</string>
+    <string name="secondHeading">Wie hat es ihenen gefallen?</string>
+    <string name="Heading">Ende der Fuehrung</string>
     <string name="textImportantExplanation" translatable="false">Nur wichtiege Informationen</string>
     <string name="textLongExplanation">Ausführliche Informationen</string>
     <string name="start_der_tour">Start der Tour</string>
@@ -15,7 +17,7 @@
     <string name="important_information">Nur wichtiege Informationen</string>
     <string name="lentgh_of_the_explanation">Länge der Erklärung</string>
     <string name="heading_two">Planen sie Ihre Führung</string>
-    <string name="Heading">Wilkommen im Computermuseum</string>
+    <string name="headingMainScreen">Wilkommen im Computermuseum</string>
     <string name="list_of_exhibits">Liste der Ausstellungsstücke</string>
     <string name="willkommen">Willkommen</string>
     <string name="choose_guide_type">Wählen Sie die Art der Führung</string>
