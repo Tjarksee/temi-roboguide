@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.home_screen)
+        setContentView(R.layout.activity_main)
 
         val tourLengthGroup = findViewById<RadioGroup>(R.id.tourLengthRadioGroup)
         val textLengthGroup = findViewById<RadioGroup>(R.id.textLengthRadioGroup)
