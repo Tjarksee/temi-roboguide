@@ -1,5 +1,6 @@
 package de.fhkiel.temi.robogguide
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -51,25 +52,12 @@ MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermissionRes
         }
 
         // let robot speak on button click
-        findViewById<Button>(R.id.btnSpeakHelloWorld).setOnClickListener {
-            speakText("Hello World!")
+        findViewById<Button>(R.id.btnStart).setOnClickListener {
+            val intent = Intent(this, ExecutionActivity::class.java)
+            startActivity(intent)
         }
 
-        findViewById<Button>(R.id.btnSpeakLocations).setOnClickListener {
-            speakLocations()
-        }
 
-        findViewById<Button>(R.id.btnCancelSpeak).setOnClickListener {
-            mRobot?.cancelAllTtsRequests()
-        }
-
-        findViewById<Button>(R.id.btnGotoHomeBase).setOnClickListener {
-            gotoHomeBase()
-        }
-
-        findViewById<Button>(R.id.btnExitApp).setOnClickListener {
-            finishAffinity()
-        }
     }
 
     override fun onStart() {
