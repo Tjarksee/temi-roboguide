@@ -123,6 +123,7 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
 
     fun getTexts (locationId:String,itemId:String,transferId:String) : Map<String, JSONObject>{
         val textes = getTableDataAsJson("texts", "SELECT * FROM `texts` WHERE location_id=$locationId")
+        return textes
     }
 
     fun getSingleValueFromTable(tableName:String, query:String ) : String{
