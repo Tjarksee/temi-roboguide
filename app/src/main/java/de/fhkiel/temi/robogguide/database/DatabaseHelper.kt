@@ -115,16 +115,20 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
         return jsonMap
     }
 
-    fun getItems(locationId : String): Map<String, JSONObject>{
-        val items = getTableDataAsJson("items", "SELECT * FROM `items` WHERE location_id=$locationId")
-        return items
+    fun getDbWithDynamicIds(dbIds: List<String>, columnNames: List<String>, tableName: String): Map<String, JSONObject> {
+        val limitedIds = dbIds.take(3)
+        val limitedColumns = columnNames.take(3)
+        if (limitedIds.size != limitedColumns.size) {
+            throw IllegalArgumentException("Die Anzahl der IDs und der Spaltennamen muss übereinstimmen!")
+        }
+        val whereClause = limitedIds.zip(limitedColumns).joinToString(separator = " AND ") { (id, column) -> "$column=$id" }
+        val query = "SELECT * FROM `$tableName` WHERE $whereClause"
+        val values = getTableDataAsJson(tableName, query)
+        return values
     }
 
 
-    fun getTexts (locationId:String,itemId:String,transferId:String) : Map<String, JSONObject>{
-        val textes = getTableDataAsJson("texts", "SELECT * FROM `texts` WHERE location_id=$locationId")
-        return textes
-    }
+
 
     fun getSingleValueFromTable(tableName:String, query:String ) : String{
         var value = ""
