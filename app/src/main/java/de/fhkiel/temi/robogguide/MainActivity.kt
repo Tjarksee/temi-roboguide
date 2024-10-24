@@ -1,5 +1,6 @@
 package de.fhkiel.temi.robogguide
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -31,7 +32,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
         val tourLengthGroup = findViewById<RadioGroup>(R.id.tourLengthRadioGroup)
         val textLengthGroup = findViewById<RadioGroup>(R.id.textLengthRadioGroup)
-        val startTourButton = findViewById<Button>(R.id.startTour)
+        val startTourButton = findViewById<Button>(R.id.btnStartTour)
         // ---- DATABASE ACCESS ----
         val databaseName = "roboguide.db"
         database = DatabaseHelper(this, databaseName)
@@ -54,6 +55,16 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
         } catch (e: IOException) {
             e.printStackTrace()
+        }
+
+        findViewById<Button>(R.id.btnStartTour).setOnClickListener {
+            val intent = Intent(this, ExecutionActivity::class.java)
+            startActivity(intent)
+        }
+
+        findViewById<Button>(R.id.btnList).setOnClickListener {
+            val intent = Intent(this, IndividualGuideActivity::class.java)
+            startActivity(intent)
         }
 
         tourLengthGroup.setOnCheckedChangeListener { _, _ ->

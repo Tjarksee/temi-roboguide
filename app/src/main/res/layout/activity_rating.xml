@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/rating_view"
+    android:id="@+id/RatingView"
     tools:context=".RatingActivity">
 
     <RatingBar
@@ -52,7 +52,7 @@
         app:layout_constraintTop_toBottomOf="@+id/endHeader" />
 
     <Button
-        android:id="@+id/continueEndScreen"
+        android:id="@+id/btnContinue"
         android:layout_width="147dp"
         android:layout_height="89dp"
         android:layout_marginStart="567dp"
