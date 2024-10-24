@@ -2,5 +2,11 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="light_blue">#D1E8E4</color>
+    <color name="button_text">#FFFFFF</color>
+    <color name="button_background">#3F51B5</color>
+    <color name="button_background_pressed">#303F9F</color>
+    <color name="radio_button_checked">#FFBB86FC</color>
+    <color name="radio_button_unchecked">#E0E0E0</color>
     <color name="selectedColor">#36df56</color>
 </resources>
