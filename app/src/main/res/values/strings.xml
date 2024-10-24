@@ -9,4 +9,31 @@
     <string name="Continue">Weiter</string>
     <string name="secondHeading">Wie hat es ihenen gefallen?</string>
     <string name="Heading">Ende der Fuehrung</string>
+    <string name="textImportantExplanation" translatable="false">Nur wichtiege Informationen</string>
+    <string name="textLongExplanation">Ausführliche Informationen</string>
+    <string name="start_der_tour">Start der Tour</string>
+    <string name="explination_length">Länge der Erklärung</string>
+    <string name="long_explanation">Ausfuehrliche Inforamtionen</string>
+    <string name="important_information">Nur wichtiege Informationen</string>
+    <string name="lentgh_of_the_explanation">Länge der Erklärung</string>
+    <string name="heading_two">Planen sie Ihre Führung</string>
+    <string name="headingMainScreen">Wilkommen im Computermuseum</string>
+    <string name="list_of_exhibits">Liste der Ausstellungsstücke</string>
+    <string name="willkommen">Willkommen</string>
+    <string name="choose_guide_type">Wählen Sie die Art der Führung</string>
+    <string name="explanation_type">Erklärungsart:</string>
+    <string name="v_short">Kurz</string>
+    <string name="v_long">Lang</string>
+    <string name="detail_level">Detaillierungsgrad:</string>
+    <string name="simple">Einfach</string>
+    <string name="detailed">Ausführlich</string>
+    <string name="individual">Individuell</string>
+    <string name="start">Start</string>
+    <string name="zur_ck">Zurück</string>
+    <string name="exit">Exit</string>
+    <string name="skip">Skip</string>
+    <string name="pause">Pause</string>
+    <string name="beschreibung_des_aktuellen_bereichs">Beschreibung des aktuellen Bereichs</string>
+    <string name="aktueller_bereich_bereich_1">Aktueller Bereich: Bereich 1</string>
+    <string name="f_hrung">Führung</string>
 </resources>
