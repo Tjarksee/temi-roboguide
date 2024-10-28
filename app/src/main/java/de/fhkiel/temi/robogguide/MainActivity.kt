@@ -29,14 +29,12 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
         val tourLengthGroup = findViewById<RadioGroup>(R.id.tourLengthRadioGroup)
         val textLengthGroup = findViewById<RadioGroup>(R.id.textLengthRadioGroup)
         val startTourButton = findViewById<Button>(R.id.btnStartTour)
         // ---- DATABASE ACCESS ----
         val databaseName = "roboguide.db"
-        database = DatabaseHelper(this, databaseName)
-
+        database = DatabaseHelper.getInstance(this, databaseName)
         try {
             database.initializeDatabase() // Initialize the database and copy it from assets
 
@@ -53,6 +51,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         } catch (e: IOException) {
             e.printStackTrace()
         }
+        val locations = database.getLocationDataAsJson()
 
         findViewById<Button>(R.id.btnStartTour).setOnClickListener {
             val intent = Intent(this, ExecutionActivity::class.java)
@@ -60,7 +59,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         }
 
         findViewById<Button>(R.id.btnList).setOnClickListener {
-            val intent = Intent(this, IndividualGuideActivity::class.java)
+            val intent = IndividualGuideActivity.newIntent(this, locations)
             startActivity(intent)
         }
 
@@ -126,6 +125,11 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         }
     }
 
+    private fun getMapName() : String{
+        val mapName = mRobot?.getMapData()!!.mapName
+        return mapName
+    }
+
     /**
      * Uses temi tts to speak every listed location on the active map
      */
@@ -154,7 +158,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         singleThreadExecutor.execute {
             getMap()?.let { mapDataModel ->
                 Log.i("Map-mapImage", mapDataModel.mapImage.typeId)
-                Log.i("Map-mapId", mapDataModel.mapId)
+                Log.i("Map-mapId", mapDataModel.mapId ?: "Map ID not found")
                 Log.i("Map-mapInfo", mapDataModel.mapInfo.toString())
                 Log.i("Map-greenPaths", mapDataModel.greenPaths.toString())
                 Log.i("Map-virtualWalls", mapDataModel.virtualWalls.toString())

@@ -3,13 +3,13 @@ package de.fhkiel.temi.robogguide.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import de.fhkiel.temi.robogguide.TourHelper
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.sql.Types.NULL
 
 class DatabaseHelper(context: Context, private val databaseName: String) : SQLiteOpenHelper(context, databaseName, null, 1) {
 
@@ -19,17 +19,28 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
     private val appContext: Context = context
     private var dbFile: File? = null
 
+    companion object {
+        @Volatile
+        private var instance: DatabaseHelper? = null
+
+        fun getInstance(context: Context, databaseName: String): DatabaseHelper {
+            return instance ?: synchronized(this) {
+                instance ?: DatabaseHelper(context.applicationContext, databaseName).also { instance = it }
+            }
+        }
+    }
+
     override fun onCreate(db: SQLiteDatabase) {}
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
 
     @Suppress("unused")
-    fun getDatabase(): SQLiteDatabase?{
+    fun getDatabase(): SQLiteDatabase? {
         return database
     }
 
     @Suppress("unused")
-    fun getDBFile(): File?{
+    fun getDBFile(): File? {
         return dbFile
     }
 
@@ -62,7 +73,7 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
      * @param withOpen  Set to false, to only copy the database, otherwise it is also opened (default)
      */
     @Throws(IOException::class)
-    fun initializeDatabase(withOpen: Boolean = true){
+    fun initializeDatabase(withOpen: Boolean = true) {
         this.readableDatabase // Create an empty database in the default system path
         dbFile = copyDatabase() // Overwrite the existing database with the one from assets
 
@@ -71,9 +82,51 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
         }
     }
 
+    @Suppress("unused")
+    fun getTableDataAsJson(tableName: String): Map<String, JSONObject> {
+        val (columns, primaryKey) = getTableStructure(tableName)
+
+        if (primaryKey == null) {
+            throw IllegalArgumentException("Table $tableName has no primary key.")
+        }
+
+        val jsonMap = mutableMapOf<String, JSONObject>()
+
+        database?.let { db ->
+            val cursor = db.rawQuery("SELECT * FROM `$tableName`", null)
+
+            if (cursor.moveToFirst()) {
+                do {
+                    val jsonObject = JSONObject()
+                    var primaryKeyValue: String? = null
+
+                    for (column in columns) {
+                        val value = cursor.getString(cursor.getColumnIndexOrThrow(column))
+                        jsonObject.put(column, value)
+
+                        // Check if this column is the primary key and save its value
+                        if (column == primaryKey) {
+                            primaryKeyValue = value
+                        }
+                    }
+
+                    // Ensure the primary key value is not null before adding to the map
+                    primaryKeyValue?.let {
+                        jsonMap[it] = jsonObject
+                    }
+                } while (cursor.moveToNext())
+            }
+            cursor.close()
+        }
+
+        return jsonMap
+    }
+
+
     // Method to open the copied database and store its reference
     private fun openDatabase(): SQLiteDatabase? {
-        database = SQLiteDatabase.openDatabase(databaseFullPath, null, SQLiteDatabase.OPEN_READWRITE)
+        database =
+            SQLiteDatabase.openDatabase(databaseFullPath, null, SQLiteDatabase.OPEN_READWRITE)
         return database
     }
 
@@ -109,45 +162,35 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
         return Pair(columns, primaryKey)
     }
 
-    fun getLocationDataAsJson(mapName: String): Map<String, JSONObject>{
-        val placesId = getSingleValueFromTable("places","SELECT `id` FROM `places` WHERE name=$mapName").toInt()
-        val jsonMap = getTableDataAsJson("locations","SELECT * FROM `locations` WHERE places_id=$placesId")
+    fun getLocationDataAsJson(): Map<String, JSONObject> {
+        val jsonMap = getTableDataAsJsonWithQuery(
+            "locations",
+            "SELECT * FROM `locations` WHERE places_id='2'"
+        )
         return jsonMap
     }
 
-    fun getDbWithDynamicIds(dbIds: List<String>, columnNames: List<String>, tableName: String): Map<String, JSONObject> {
+    fun getDbWithDynamicIds(
+        dbIds: List<String>,
+        columnNames: List<String>,
+        tableName: String
+    ): Map<String, JSONObject> {
         val limitedIds = dbIds.take(3)
         val limitedColumns = columnNames.take(3)
         if (limitedIds.size != limitedColumns.size) {
             throw IllegalArgumentException("Die Anzahl der IDs und der Spaltennamen muss übereinstimmen!")
         }
-        val whereClause = limitedIds.zip(limitedColumns).joinToString(separator = " AND ") { (id, column) -> "$column=$id" }
+        val whereClause = limitedIds.zip(limitedColumns)
+            .joinToString(separator = " AND ") { (id, column) -> "$column=$id" }
         val query = "SELECT * FROM `$tableName` WHERE $whereClause"
-        val values = getTableDataAsJson(tableName, query)
+        val values = getTableDataAsJsonWithQuery(tableName, query)
         return values
     }
 
 
-
-
-    fun getSingleValueFromTable(tableName:String, query:String ) : String{
-        var value = ""
-        val(columns, primaryKey) = getTableStructure("items")
-        database?.let { db ->
-            val cursor = db.rawQuery("SELECT ${columns[0]} " + query, arrayOf(null))
-            if (cursor.moveToFirst()) {
-                value = cursor.getString(cursor.getColumnIndexOrThrow(columns[0]))
-            }
-            cursor.close()
-        }
-        if (value == ""){
-            throw IllegalArgumentException("$query was not successful for $tableName .")
-        }
-        return value
-    }
     // Method to read data dynamically and convert it into a JSON Map using the primary key as the key
     @Suppress("unused")
-    fun getTableDataAsJson(tableName: String, query:String): Map<String, JSONObject> {
+    fun getTableDataAsJsonWithQuery(tableName: String, query: String): Map<String, JSONObject> {
         val (columns, primaryKey) = getTableStructure(tableName)
 
         if (primaryKey == null) {
@@ -185,4 +228,8 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
 
         return jsonMap
     }
+
+
+
+
 }
