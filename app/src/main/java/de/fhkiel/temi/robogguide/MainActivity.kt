@@ -48,10 +48,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
             */
 
             // use json code to get database objects
-            val places = database.getTableDataAsJson("places") // Fetch data as JSON
-            val locations = database.getTableDataAsJson("locations") // Fetch data as JSON
-            Log.i("MainActivity", "Places: $places")
-            Log.i("MainActivity", "Locations: $locations")
+
 
         } catch (e: IOException) {
             e.printStackTrace()
