@@ -8,21 +8,21 @@ import android.widget.RadioGroup
 import androidx.appcompat.app.AppCompatActivity
 import com.robotemi.sdk.Robot
 import com.robotemi.sdk.TtsRequest
+import com.robotemi.sdk.listeners.OnGoToLocationStatusChangedListener
 import com.robotemi.sdk.listeners.OnRobotReadyListener
 import com.robotemi.sdk.map.MapDataModel
 import com.robotemi.sdk.permission.OnRequestPermissionResultListener
 import com.robotemi.sdk.permission.Permission
 import de.fhkiel.temi.robogguide.database.DatabaseHelper
-import org.json.JSONException
 import java.io.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import de.fhkiel.temi.robogguide.TourHelper
 
 class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermissionResultListener {
     private var mRobot: Robot? = null
     private lateinit var database: DatabaseHelper
     private lateinit var tourHelper: TourHelper
-
     private var tourLengthGroupSelected = false
     private var textLengthGroupSelected = false
 
@@ -54,34 +54,28 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
             e.printStackTrace()
         }
         tourHelper = TourHelper()
-        val locations = database.getLocationDataAsJson()
+        val transfers = database.getTransferDataAsJson()
+        Log.d("MainActivity", "Loaded transfers from DB: $transfers")
 
-        startTourButton.setOnClickListener {
-            val isImportantTour = tourLengthGroup.checkedRadioButtonId == R.id.shortTour
-            if (locations.isNotEmpty()) {
-                try {
-                    if (isImportantTour) {
-                        mRobot?.let { robot ->
-                            tourHelper.startImportantTour(robot, locations)
-                        } ?: run {
-                            Log.e("MainActivity", "Robot instance is null")
-                        }
-                    } else {
-                        mRobot?.let { robot ->
-                            tourHelper.startFullTour(robot, locations)
-                        } ?: run {
-                            Log.e("MainActivity", "Robot instance is null")
-                        }
-                    }
-                } catch (e: JSONException) {
-                    Log.e("MainActivity", "Error starting tour: ${e.message}")
-                }
+
+        findViewById<Button>(R.id.btnStartTour).setOnClickListener {
+            val intent = Intent(this, ExecutionActivity::class.java)
+            startActivity(intent)
+
+            // TourHelper verwenden, um den Startpunktnamen zu finden
+            val listOfLocations = database.getTransferDataAsJson() // Holen der Transferdaten als JSON
+            val startPointName = tourHelper.getStartingPoint(listOfLocations)
+
+            if (startPointName.isEmpty()) {
+                mRobot?.goTo(startPointName)
             } else {
-                Log.e("MainActivity", "No locations available to start the tour.")
+                Log.e("MainActivity", "Keine gültige Startlocation gefunden, Navigation nicht möglich.")
             }
         }
 
+
         findViewById<Button>(R.id.btnList).setOnClickListener {
+            val locations = database.getLocationDataAsJson()
             val intent = IndividualGuideActivity.newIntent(this, locations)
             startActivity(intent)
         }
@@ -97,6 +91,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
     }
 
+
     private fun checkIfBothSelected(nextButton: Button) {
         if (tourLengthGroupSelected && textLengthGroupSelected) {
             nextButton.isEnabled = true
@@ -105,18 +100,32 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
     override fun onStart() {
         super.onStart()
-        mRobot = Robot.getInstance()
-        mRobot?.addOnRobotReadyListener(this)
-        mRobot?.addOnRequestPermissionResultListener(this)
-
+        Robot.getInstance().addOnRobotReadyListener(this)
+        Robot.getInstance().addOnRequestPermissionResultListener(this)
     }
 
     override fun onStop() {
         super.onStop()
-        mRobot?.removeOnRobotReadyListener(this)
-        mRobot?.removeOnRequestPermissionResultListener(this)
-
+        Robot.getInstance().removeOnRobotReadyListener(this)
+        Robot.getInstance().removeOnRequestPermissionResultListener(this)
     }
+     fun onGoToLocationStatusChanged(location: String, status: String, descriptionId: Int, trackingId: String) {
+        when (status) {
+            OnGoToLocationStatusChangedListener.START -> {
+                Log.i("MainActivity", "Der Roboter navigiert zu: $location")
+            }
+            OnGoToLocationStatusChangedListener.COMPLETE -> {
+                Log.i("MainActivity", "Der Roboter hat die Position erreicht: $location")
+            }
+            OnGoToLocationStatusChangedListener.ABORT -> {
+                Log.e("MainActivity", "Die Navigation zum Standort $location wurde abgebrochen.")
+            }
+            else -> {
+                Log.w("MainActivity", "Unbekannter Navigationsstatus: $status für Standort: $location")
+            }
+        }
+    }
+
 
     override fun onDestroy() {
         super.onDestroy()

@@ -3,6 +3,7 @@ package de.fhkiel.temi.robogguide.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.util.Log
 import de.fhkiel.temi.robogguide.TourHelper
 import org.json.JSONObject
 import java.io.File
@@ -169,6 +170,15 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
         )
         return jsonMap
     }
+    fun getTransferDataAsJson(): Map<String, JSONObject> {
+        val jsonMap = getTableDataAsJsonWithQuery(
+            "transfers",
+            "SELECT * FROM `transfers`"
+        )
+        Log.d("DatabaseHelper", "Transfer data: $jsonMap")
+        return jsonMap
+    }
+
 
     fun getDbWithDynamicIds(
         dbIds: List<String>,
@@ -209,23 +219,31 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
 
                     for (column in columns) {
                         val value = cursor.getString(cursor.getColumnIndexOrThrow(column))
-                        jsonObject.put(column, value)
+                        if (value != null) {
+                            jsonObject.put(column, value)
+                        } else {
+                            Log.w("DatabaseHelper", "Value for column $column is null or missing")
+                            jsonObject.put(column, JSONObject.NULL) // Falls der Wert null ist, explizit NULL setzen
+                        }
 
-                        // Check if this column is the primary key and save its value
+                        // Überprüfen, ob die Spalte der Primärschlüssel ist und den Wert speichern
                         if (column == primaryKey) {
                             primaryKeyValue = value
                         }
                     }
 
-                    // Ensure the primary key value is not null before adding to the map
+                    // Sicherstellen, dass der Primärschlüsselwert nicht null ist, bevor zum Map hinzugefügt wird
                     primaryKeyValue?.let {
                         jsonMap[it] = jsonObject
-                    }
+                    } ?: Log.e("DatabaseHelper", "Primary key for table $tableName is null")
                 } while (cursor.moveToNext())
+            } else {
+                Log.w("DatabaseHelper", "Query returned no results: $query")
             }
             cursor.close()
         }
 
+        Log.d("DatabaseHelper", "Loaded JSON data: $jsonMap")
         return jsonMap
     }
 

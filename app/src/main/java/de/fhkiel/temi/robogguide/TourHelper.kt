@@ -1,94 +1,56 @@
 package de.fhkiel.temi.robogguide
-
+import android.content.Context
 import android.util.Log
-import com.robotemi.sdk.Robot
+import de.fhkiel.temi.robogguide.database.DatabaseHelper
 import org.json.JSONObject
+import java.io.IOException
 
-class TourHelper {
 
-    private fun getStartingPoint(listOfLocations: Map<String, JSONObject>): String? {
+class TourHelper{
+    lateinit var planedTour : Any
+    private lateinit var database: DatabaseHelper
+
+
+     fun getStartingPoint(listOfLocations: Map<String, JSONObject>): String {
         val startIds: MutableList<String> = mutableListOf()
-
-        listOfLocations.forEach { (_, jsonObject) ->
-            val fromId = jsonObject.optString("location_from", null)
-
-            if (fromId != null && fromId.isNotEmpty()) {
-                // Prüfen, ob "location_from" keinen Eingang hat
-                if (listOfLocations.none { (_, innerJsonObject) ->
-                        innerJsonObject.optString("location_to", "") == fromId
-                    }) {
-                    startIds.add(fromId)
+        var check = false
+        listOfLocations.forEach { (key, jsonObject) ->
+            val fromId = jsonObject["location_from"]
+            listOfLocations.forEach { (innerKey, innerJsonObject) ->
+                if (fromId == innerJsonObject["location_to"]) {
+                    check = true
                 }
-            } else {
-                Log.e("getStartingPoint", "JSON object does not have key 'location_from'")
+            }
+            if (!check) {
+                val start = jsonObject["location_from"]
+                startIds.add(start.toString())
             }
         }
+        if (startIds.isEmpty()) {
+            Log.e("startpunkt", "there is no start id")
+        }
+        Log.i("startpunkt", "der Startpunkt ist ${startIds.toString()}")
 
-        return if (startIds.isEmpty()) {
-            Log.e("startpunkt", "There is no start id")
-            null
+        // Erweiterung: Hole den Namen der Location aus der 'locations'-Tabelle basierend auf 'location_to'
+        val locationToId = startIds[0]
+        val locationQuery = "SELECT * FROM `locations` WHERE `id` = '$locationToId'"
+        val locations = database.getTableDataAsJsonWithQuery("locations", locationQuery)
+
+        if (locations.isEmpty()) {
+            Log.e("TourHelper", "Keine Location für location_to: $locationToId gefunden.")
+            return startIds[0]
+        }
+
+        val location = locations.values.first()
+        val locationName = location.optString("name", "")
+
+        if (locationName.isEmpty()) {
+            Log.e("TourHelper", "Kein Name für location_to $locationToId gefunden.")
+            return startIds[0]
         } else {
-            Log.i("startpunkt", "Der Startpunkt ist ${startIds[0]}")
-            startIds[0]
-        }
-    }
-
-    fun startFullTour(robot: Robot, listOfLocations: Map<String, JSONObject>) {
-        val startingPoint = getStartingPoint(listOfLocations)
-        if (startingPoint == null) {
-            Log.e("TourHelper", "Failed to start tour: No valid start point found.")
-            return
+            Log.i("TourHelper", "Name für location_to $locationToId: $locationName")
         }
 
-        val locations = generateTourPath(listOfLocations, startingPoint)
-        if (locations.isNotEmpty()) {
-            val success = robot.patrol(locations, false, 1, 5)
-            if (success) {
-                Log.i("TourHelper", "Full tour started successfully.")
-            } else {
-                Log.e("TourHelper", "Failed to start full tour.")
-            }
-        } else {
-            Log.e("TourHelper", "No valid locations available for full tour.")
-        }
-    }
-
-    fun startImportantTour(robot: Robot, listOfLocations: Map<String, JSONObject>) {
-        val importantLocations = getImportantLocations(listOfLocations)
-        val startingPoint = getStartingPoint(importantLocations)
-
-        if (startingPoint == null) {
-            Log.e("TourHelper", "No valid start point found for the important tour.")
-            return
-        }
-
-        val locations = generateTourPath(importantLocations, startingPoint)
-
-        if (locations.isNotEmpty()) {
-            val success = robot.patrol(locations, false, 1, 5)
-            if (success) {
-                Log.i("TourHelper", "Important tour started successfully.")
-            } else {
-                Log.e("TourHelper", "Failed to start important tour.")
-            }
-        } else {
-            Log.e("TourHelper", "No valid important locations available for tour.")
-        }
-    }
-
-    private fun generateTourPath(listOfLocations: Map<String, JSONObject>, start: String): List<String> {
-        val tourPath = mutableListOf<String>()
-        var currentLocation = start
-
-        while (currentLocation.isNotEmpty()) {
-            tourPath.add(currentLocation)
-            currentLocation = listOfLocations[currentLocation]?.optString("location_to", "") ?: ""
-        }
-
-        return tourPath
-    }
-
-    private fun getImportantLocations(listOfLocations: Map<String, JSONObject>): Map<String, JSONObject> {
-        return listOfLocations.filterValues { it.optInt("important", 0) == 1 }
+        return locationName
     }
 }
