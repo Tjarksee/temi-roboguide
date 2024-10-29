@@ -62,7 +62,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center"
-                    android:text="@string/lentgh_of_the_explanation"
+                    android:text="@string/art_der_tour"
                     android:textSize="30sp" />
 
             </LinearLayout>
@@ -81,7 +81,7 @@
                     android:background="@drawable/radio_selector"
                     android:button="@android:color/transparent"
                     android:gravity="center"
-                    android:text="@string/important_information"
+                    android:text="@string/nur_wichtige_bereiche"
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
@@ -93,7 +93,7 @@
                     android:background="@drawable/radio_selector"
                     android:button="@android:color/transparent"
                     android:gravity="center"
-                    android:text="@string/long_explanation"
+                    android:text="Alle Bereiche"
                     android:textSize="24sp"
                     android:textStyle="bold" />
 

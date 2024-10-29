@@ -13,6 +13,7 @@ import com.robotemi.sdk.map.MapDataModel
 import com.robotemi.sdk.permission.OnRequestPermissionResultListener
 import com.robotemi.sdk.permission.Permission
 import de.fhkiel.temi.robogguide.database.DatabaseHelper
+import org.json.JSONException
 import java.io.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -20,6 +21,7 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermissionResultListener {
     private var mRobot: Robot? = null
     private lateinit var database: DatabaseHelper
+    private lateinit var tourHelper: TourHelper
 
     private var tourLengthGroupSelected = false
     private var textLengthGroupSelected = false
@@ -51,11 +53,32 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         } catch (e: IOException) {
             e.printStackTrace()
         }
+        tourHelper = TourHelper()
         val locations = database.getLocationDataAsJson()
 
-        findViewById<Button>(R.id.btnStartTour).setOnClickListener {
-            val intent = Intent(this, ExecutionActivity::class.java)
-            startActivity(intent)
+        startTourButton.setOnClickListener {
+            val isImportantTour = tourLengthGroup.checkedRadioButtonId == R.id.shortTour
+            if (locations.isNotEmpty()) {
+                try {
+                    if (isImportantTour) {
+                        mRobot?.let { robot ->
+                            tourHelper.startImportantTour(robot, locations)
+                        } ?: run {
+                            Log.e("MainActivity", "Robot instance is null")
+                        }
+                    } else {
+                        mRobot?.let { robot ->
+                            tourHelper.startFullTour(robot, locations)
+                        } ?: run {
+                            Log.e("MainActivity", "Robot instance is null")
+                        }
+                    }
+                } catch (e: JSONException) {
+                    Log.e("MainActivity", "Error starting tour: ${e.message}")
+                }
+            } else {
+                Log.e("MainActivity", "No locations available to start the tour.")
+            }
         }
 
         findViewById<Button>(R.id.btnList).setOnClickListener {
@@ -82,14 +105,17 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
     override fun onStart() {
         super.onStart()
-        Robot.getInstance().addOnRobotReadyListener(this)
-        Robot.getInstance().addOnRequestPermissionResultListener(this)
+        mRobot = Robot.getInstance()
+        mRobot?.addOnRobotReadyListener(this)
+        mRobot?.addOnRequestPermissionResultListener(this)
+
     }
 
     override fun onStop() {
         super.onStop()
-        Robot.getInstance().removeOnRobotReadyListener(this)
-        Robot.getInstance().removeOnRequestPermissionResultListener(this)
+        mRobot?.removeOnRobotReadyListener(this)
+        mRobot?.removeOnRequestPermissionResultListener(this)
+
     }
 
     override fun onDestroy() {

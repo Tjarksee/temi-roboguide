@@ -36,4 +36,6 @@
     <string name="beschreibung_des_aktuellen_bereichs">Beschreibung des aktuellen Bereichs</string>
     <string name="aktueller_bereich_bereich_1">Aktueller Bereich: Bereich 1</string>
     <string name="f_hrung">Führung</string>
+    <string name="nur_wichtige_bereiche">nur wichtige Bereiche</string>
+    <string name="art_der_tour">Art der Tour</string>
 </resources>
