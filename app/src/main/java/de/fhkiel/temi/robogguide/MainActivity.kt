@@ -60,31 +60,16 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
 
         findViewById<Button>(R.id.btnStartTour).setOnClickListener {
-            // Startet die ExecutionActivity
             intent = Intent(this, ExecutionActivity::class.java)
             startActivity(intent)
 
-            // TourHelper verwenden, um die Transferdaten zu laden und den Startpunkt zu initialisieren
-            val listOfLocations = database.getTransferDataAsJson() // Holen der Transferdaten als JSON
-            tourHelper.initializeStartLocation(listOfLocations) // Startpunkt festlegen
+            val listOfLocations = database.getTransferDataAsJson()
+            val startPointName = tourHelper.getStartingPoint(listOfLocations)
 
-            // Navigation nur starten, wenn ein gültiger Startpunkt gefunden wurde
-            var nextLocationName = tourHelper.getNextLocationName(listOfLocations)
-            if (nextLocationName.isNotEmpty()) {
-                // Schleife, um den Roboter zu jeder Location zu navigieren, bis kein weiterer Punkt vorhanden ist
-                while (nextLocationName.isNotEmpty()) {
-                    mRobot?.goTo("home base")
-
-                    // Warte, bis der Roboter die aktuelle Location erreicht hat (abhängig von der API)
-                    // Beispiel (sollte angepasst werden, um die tatsächliche Ankunft des Roboters zu prüfen):
-                    Thread.sleep(5000) // Wartezeit simulieren
-
-                    // Hole den Namen der nächsten Location
-                    nextLocationName = tourHelper.getNextLocationName(listOfLocations)
-                }
-                Log.i("MainActivity", "Tour abgeschlossen, keine weiteren Ziel-Standorte.")
+            if (startPointName.isNotEmpty()) {
+                mRobot?.goTo(startPointName)
             } else {
-                Log.e("MainActivity", "Keine gültige Startlocation gefunden, Navigation nicht möglich.")
+                Log.e("MainActivity", "Keine gültige Ziel-Location gefunden, Navigation nicht möglich.")
             }
         }
 

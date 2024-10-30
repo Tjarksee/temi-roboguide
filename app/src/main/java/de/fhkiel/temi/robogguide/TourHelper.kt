@@ -5,51 +5,42 @@ import de.fhkiel.temi.robogguide.database.DatabaseHelper
 import org.json.JSONObject
 import java.io.IOException
 
-
 class TourHelper(private val database: DatabaseHelper) {
 
-    private var currentLocationId: String? = null // Speichert die aktuelle Position des Roboters
-
-    // Methode zum Initialisieren des Startpunkts (nur am Anfang der Tour aufrufen)
-    fun initializeStartLocation(listOfLocations: Map<String, JSONObject>) {
+    fun getStartingPoint(listOfLocations: Map<String, JSONObject>): String {
         val startIds: MutableList<String> = mutableListOf()
+        var check = false
 
+        // Ermittlung der `location_from`-IDs, die als Startpunkte infrage kommen
         listOfLocations.forEach { (_, jsonObject) ->
             val fromId = jsonObject.optString("location_from")
-            var isStart = true
+            check = false
 
             listOfLocations.forEach { (_, innerJsonObject) ->
                 if (fromId == innerJsonObject.optString("location_to")) {
-                    isStart = false
+                    check = true
                 }
             }
 
-            if (isStart) {
+            if (!check) {
                 startIds.add(fromId)
             }
         }
 
-        if (startIds.isNotEmpty()) {
-            currentLocationId = startIds[0] // Setze den Startpunkt als `currentLocationId`
-            Log.i("TourHelper", "Der Startpunkt ist $currentLocationId")
-        } else {
-            Log.e("TourHelper", "Es wurde kein Startpunkt gefunden.")
-        }
-    }
-
-    // Methode zum Abrufen der nächsten Ziel-Location basierend auf der aktuellen Position
-    fun getNextLocationName(listOfLocations: Map<String, JSONObject>): String {
-        if (currentLocationId == null) {
-            Log.e("TourHelper", "Startpunkt ist nicht initialisiert.")
+        if (startIds.isEmpty()) {
+            Log.e("startpunkt", "Es wurde kein Startpunkt gefunden.")
             return ""
         }
 
-        // Suche die `location_to` für die aktuelle `location_from`
-        val nextTransfer = listOfLocations.values.firstOrNull { it.optString("location_from") == currentLocationId }
+        Log.i("startpunkt", "Der Startpunkt ist ${startIds[0]}")
+
+        // Erweiterung: Suche die `location_to` für den ermittelten Startpunkt (`location_from`)
+        val locationFromId = startIds[0] // Der erste gefundene Startpunkt wird verwendet
+        val nextTransfer = listOfLocations.values.firstOrNull { it.optString("location_from") == locationFromId }
         val nextLocationId = nextTransfer?.optString("location_to", "")
 
         if (nextLocationId.isNullOrEmpty()) {
-            Log.e("TourHelper", "Keine gültige `location_to`-ID für location_from: $currentLocationId gefunden.")
+            Log.e("TourHelper", "Keine gültige `location_to`-ID für location_from: $locationFromId gefunden.")
             return ""
         }
 
@@ -70,13 +61,8 @@ class TourHelper(private val database: DatabaseHelper) {
             return ""
         }
 
-        // Aktualisiere `currentLocationId` für den nächsten Schritt
-        currentLocationId = nextLocationId
         Log.i("TourHelper", "Name der nächsten Ziel-Location (location_to): $locationName")
 
         return locationName
     }
 }
-
-
-
