@@ -53,25 +53,41 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         } catch (e: IOException) {
             e.printStackTrace()
         }
-        tourHelper = TourHelper()
+        tourHelper = TourHelper(database)
         val transfers = database.getTransferDataAsJson()
         Log.d("MainActivity", "Loaded transfers from DB: $transfers")
 
 
+
         findViewById<Button>(R.id.btnStartTour).setOnClickListener {
-            val intent = Intent(this, ExecutionActivity::class.java)
+            // Startet die ExecutionActivity
+            intent = Intent(this, ExecutionActivity::class.java)
             startActivity(intent)
 
-            // TourHelper verwenden, um den Startpunktnamen zu finden
+            // TourHelper verwenden, um die Transferdaten zu laden und den Startpunkt zu initialisieren
             val listOfLocations = database.getTransferDataAsJson() // Holen der Transferdaten als JSON
-            val startPointName = tourHelper.getStartingPoint(listOfLocations)
+            tourHelper.initializeStartLocation(listOfLocations) // Startpunkt festlegen
 
-            if (startPointName.isEmpty()) {
-                mRobot?.goTo(startPointName)
+            // Navigation nur starten, wenn ein gültiger Startpunkt gefunden wurde
+            var nextLocationName = tourHelper.getNextLocationName(listOfLocations)
+            if (nextLocationName.isNotEmpty()) {
+                // Schleife, um den Roboter zu jeder Location zu navigieren, bis kein weiterer Punkt vorhanden ist
+                while (nextLocationName.isNotEmpty()) {
+                    mRobot?.goTo("home base")
+
+                    // Warte, bis der Roboter die aktuelle Location erreicht hat (abhängig von der API)
+                    // Beispiel (sollte angepasst werden, um die tatsächliche Ankunft des Roboters zu prüfen):
+                    Thread.sleep(5000) // Wartezeit simulieren
+
+                    // Hole den Namen der nächsten Location
+                    nextLocationName = tourHelper.getNextLocationName(listOfLocations)
+                }
+                Log.i("MainActivity", "Tour abgeschlossen, keine weiteren Ziel-Standorte.")
             } else {
                 Log.e("MainActivity", "Keine gültige Startlocation gefunden, Navigation nicht möglich.")
             }
         }
+
 
 
         findViewById<Button>(R.id.btnList).setOnClickListener {
