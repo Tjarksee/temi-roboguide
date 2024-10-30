@@ -7,62 +7,80 @@ import java.io.IOException
 
 class TourHelper(private val database: DatabaseHelper) {
 
-    fun getStartingPoint(listOfLocations: Map<String, JSONObject>): String {
-        val startIds: MutableList<String> = mutableListOf()
-        var check = false
+    private var currentLocationId: String? = null // Speichert die aktuelle Position des Roboters
+    private val route: MutableList<String> = mutableListOf() // Array zum Speichern der Locations in der Reihenfolge
 
-        // Ermittlung der `location_from`-IDs, die als Startpunkte infrage kommen
+    // Methode zum Ermitteln des Startpunkts (ohne die Route zu planen)
+    fun getStartingPoint(listOfLocations: Map<String, JSONObject>): String {
+        val startIds = mutableListOf<String>()
+
+        // Bestimme die `location_from` ohne passende `location_to` als Startpunkt
         listOfLocations.forEach { (_, jsonObject) ->
             val fromId = jsonObject.optString("location_from")
-            check = false
+            var isStart = true
 
             listOfLocations.forEach { (_, innerJsonObject) ->
                 if (fromId == innerJsonObject.optString("location_to")) {
-                    check = true
+                    isStart = false
                 }
             }
 
-            if (!check) {
+            if (isStart) {
                 startIds.add(fromId)
             }
         }
 
-        if (startIds.isEmpty()) {
-            Log.e("startpunkt", "Es wurde kein Startpunkt gefunden.")
-            return ""
+        // Falls ein Startpunkt gefunden wurde, setze ihn als aktuellen Standort und gib seinen Namen zurück
+        return if (startIds.isNotEmpty()) {
+            currentLocationId = startIds[0]
+            getLocationName(currentLocationId!!).also {
+                Log.i("TourHelper", "Der Startpunkt ist $currentLocationId mit dem Namen: $it")
+            }
+        } else {
+            Log.e("TourHelper", "Es wurde kein Startpunkt gefunden.")
+            ""
         }
+    }
 
-        Log.i("startpunkt", "Der Startpunkt ist ${startIds[0]}")
-
-        // Erweiterung: Suche die `location_to` für den ermittelten Startpunkt (`location_from`)
-        val locationFromId = startIds[0] // Der erste gefundene Startpunkt wird verwendet
-        val nextTransfer = listOfLocations.values.firstOrNull { it.optString("location_from") == locationFromId }
-        val nextLocationId = nextTransfer?.optString("location_to", "")
-
-        if (nextLocationId.isNullOrEmpty()) {
-            Log.e("TourHelper", "Keine gültige `location_to`-ID für location_from: $locationFromId gefunden.")
-            return ""
+    // Methode zum Initialisieren des Startpunkts und Festlegen der Route
+    fun initializeAndPlanRoute(listOfLocations: Map<String, JSONObject>): List<String> {
+        // Verwende `getStartingPoint`, um den Startpunkt zu bestimmen und setze `currentLocationId`
+        val startingPointName = getStartingPoint(listOfLocations)
+        if (startingPointName.isNotEmpty()) {
+            route.add(startingPointName) // Füge den Startpunkt zur Route hinzu
+            findRoute(listOfLocations)   // Starte die Routenplanung ab dem Startpunkt
         }
+        return route
+    }
 
-        // Hole den Namen der Ziel-Location (`location_to`) aus der `locations`-Tabelle
-        val locationQuery = "SELECT * FROM `locations` WHERE `id` = '$nextLocationId'"
+    // Methode zur Ermittlung der Route
+    private fun findRoute(listOfLocations: Map<String, JSONObject>) {
+        var nextLocationId: String? = currentLocationId
+
+        while (nextLocationId != null) {
+            // Suche die `location_to` für die aktuelle `location_from`
+            val nextTransfer = listOfLocations.values.firstOrNull { it.optString("location_from") == nextLocationId }
+            nextLocationId = nextTransfer?.optString("location_to", null)
+
+            if (nextLocationId != null) {
+                // Hole den Namen der `location_to` und füge ihn der Route hinzu
+                val locationName = getLocationName(nextLocationId)
+                if (locationName.isNotEmpty()) {
+                    route.add(locationName)
+                    Log.i("TourHelper", "Gefundene nächste Ziel-Location: $locationName")
+                } else {
+                    Log.e("TourHelper", "Kein Name für location_to $nextLocationId gefunden.")
+                }
+            }
+        }
+    }
+
+    // Hilfsmethode zum Abrufen des Location-Namens anhand der ID
+    private fun getLocationName(locationId: String): String {
+        val locationQuery = "SELECT * FROM `locations` WHERE `id` = '$locationId'"
         val locations = database.getTableDataAsJsonWithQuery("locations", locationQuery)
 
-        if (locations.isEmpty()) {
-            Log.e("TourHelper", "Keine Location für location_to: $nextLocationId gefunden.")
-            return ""
-        }
-
-        val location = locations.values.firstOrNull()
-        val locationName = location?.optString("name", "")
-
-        if (locationName.isNullOrEmpty()) {
-            Log.e("TourHelper", "Kein Name für location_to $nextLocationId gefunden.")
-            return ""
-        }
-
-        Log.i("TourHelper", "Name der nächsten Ziel-Location (location_to): $locationName")
-
-        return locationName
+        return locations.values.firstOrNull()?.optString("name", "") ?: ""
     }
 }
+

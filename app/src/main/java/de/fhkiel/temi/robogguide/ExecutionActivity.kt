@@ -7,6 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.robotemi.sdk.Robot
+
 
 class ExecutionActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,6 +32,9 @@ class ExecutionActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnExit).setOnClickListener {
             val intent = Intent(this, RatingActivity::class.java)
             startActivity(intent)
+            Robot.getInstance().goTo("home base")
+
+
         }
     }
 }
