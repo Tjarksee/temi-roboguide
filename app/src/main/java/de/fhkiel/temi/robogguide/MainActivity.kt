@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.Button
+import android.widget.RadioButton
 import android.widget.RadioGroup
 import androidx.appcompat.app.AppCompatActivity
 import com.robotemi.sdk.Robot
@@ -29,6 +30,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
     private var textLengthGroupSelected = false
     private var route: List<String> = listOf()
     private var currentIndex = 0
+    private val TAG = "MainActivity-Tour"
 
     private val singleThreadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
@@ -64,18 +66,30 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
 
         findViewById<Button>(R.id.btnStartTour).setOnClickListener {
-            intent = Intent(this, ExecutionActivity::class.java)
-            startActivity(intent)
-
+            val selectedTourType = findViewById<RadioButton>(tourLengthGroup.checkedRadioButtonId)
             val listOfLocations = database.getTransferDataAsJson()
-            route = tourHelper.initializeAndPlanRoute(listOfLocations)
+
+            // Wähle die richtige Route basierend auf dem RadioButton
+            route = if (selectedTourType.id == R.id.shortTour) {
+                // Wenn kurze Tour (nur wichtige Locations) ausgewählt ist
+                tourHelper.initializeAndPlanImportantRoute()
+            } else {
+                // Wenn lange Tour (alle Locations) ausgewählt ist
+                tourHelper.initializeAndPlanRoute(listOfLocations)
+            }
 
             if (route.isNotEmpty()) {
-                startTour() // Starte die Tour
+                startTour() // Starte die entsprechende Tour
             } else {
-                Log.e("MainActivity", "Keine gültige Route gefunden, Navigation nicht möglich.")
+                Log.e(TAG, "Keine gültige Route gefunden, Navigation nicht möglich.")
             }
+
+            // Wechsle zu ExecutionActivity, nachdem die Tour gestartet wurde
+            intent = Intent(this, ExecutionActivity::class.java)
+            startActivity(intent)
         }
+
+
 
 
 
@@ -116,11 +130,16 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         Robot.getInstance().removeOnRequestPermissionResultListener(this)
     }
 
+
+
+    // Startet die Tour mit allen Locations in der Route
     private fun startTour() {
         currentIndex = 0
         var retryCount = 0
         val maxRetries = 3
         val retryDelayMillis = 5000L // 5 Sekunden Wartezeit
+
+        Log.i(TAG, "Tour gestartet.")
 
         // Definiere den Listener
         val listener = object : OnGoToLocationStatusChangedListener {
@@ -130,45 +149,29 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
                 descriptionId: Int,
                 description: String
             ) {
-                Log.d("MainActivity", "Location: $location, Status: $status, Description: $description")
+                Log.d(TAG, "Statusänderung bei $location - Status: $status, Beschreibung: $description")
 
                 when (status) {
                     "complete" -> {
                         retryCount = 0 // Reset der Wiederholungszähler, wenn Standort erreicht wird
+                        Log.i(TAG, "Position erreicht: $location")
+
                         try {
                             speakText("Ich bin bei $location angekommen.")
                         } catch (e: Exception) {
-                            Log.e("MainActivity", "Fehler beim Ausführen von speakText: ${e.localizedMessage}")
+                            Log.e(TAG, "Fehler bei speakText (Standort erreicht): ${e.localizedMessage}")
                         }
-                        Log.i("MainActivity", "Der Roboter hat die Position erreicht: $location")
 
                         // Weiter zur nächsten Location in der Route
                         currentIndex++
                         if (currentIndex < route.size) {
-                            val nextLocation = route[currentIndex]
-                            try {
-                                speakText("Ich navigiere jetzt zu $nextLocation.")
-                            } catch (e: Exception) {
-                                Log.e("MainActivity", "Fehler beim Ausführen von speakText: ${e.localizedMessage}")
-                            }
-                            Log.i("MainActivity", "Navigiere zu: $nextLocation")
-                            mRobot?.addOnRobotReadyListener(object : OnRobotReadyListener {
-                                override fun onRobotReady(isReady: Boolean) {
-                                    if (isReady) {
-                                        mRobot?.goTo(nextLocation)
-                                    } else {
-                                        Log.e("MainActivity", "Roboter nicht verbunden.")
-                                    }
-                                    // Entferne den Listener nach der Überprüfung
-                                    mRobot?.removeOnRobotReadyListener(this)
-                                }
-                            })
+                            navigateToNextLocation()
                         } else {
-                            Log.i("MainActivity", "Tour abgeschlossen.")
+                            Log.i(TAG, "Tour abgeschlossen.")
                             try {
                                 speakText("Die Tour ist abgeschlossen.")
                             } catch (e: Exception) {
-                                Log.e("MainActivity", "Fehler beim Ausführen von speakText: ${e.localizedMessage}")
+                                Log.e(TAG, "Fehler bei speakText (Tour abgeschlossen): ${e.localizedMessage}")
                             }
                             mRobot?.removeOnGoToLocationStatusChangedListener(this)
                         }
@@ -176,31 +179,27 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
                     "abort" -> {
                         if (retryCount < maxRetries) {
                             retryCount++
-                            Log.e("MainActivity", "Navigation zu $location abgebrochen. Wiederholungsversuch $retryCount von $maxRetries in ${retryDelayMillis / 1000} Sekunden.")
+                            Log.w(TAG, "Navigation zu $location abgebrochen. Versuch $retryCount von $maxRetries in ${retryDelayMillis / 1000} Sekunden.")
 
                             // Erneuter Versuch nach Verzögerung
                             Handler(Looper.getMainLooper()).postDelayed({
-                                mRobot?.addOnRobotReadyListener(object : OnRobotReadyListener {
-                                    override fun onRobotReady(isReady: Boolean) {
-                                        if (isReady) {
-                                            mRobot?.goTo(location)
-                                        } else {
-                                            Log.e("MainActivity", "Roboter nicht verbunden.")
-                                        }
-                                        // Entferne den Listener nach der Überprüfung
-                                        mRobot?.removeOnRobotReadyListener(this)
-                                    }
-                                })
+                                mRobot?.goTo(location)
                             }, retryDelayMillis)
                         } else {
-                            Log.e("MainActivity", "Navigation zu $location fehlgeschlagen nach $maxRetries Versuchen.")
+                            Log.e(TAG, "Navigation zu $location fehlgeschlagen nach $maxRetries Versuchen. Fortsetzung der Tour.")
                             retryCount = 0
-                            // Optional: Fehlerbehandlung oder Fortsetzung zur nächsten Location, falls gewünscht
+                            currentIndex++
+                            if (currentIndex < route.size) {
+                                navigateToNextLocation()
+                            } else {
+                                Log.i(TAG, "Tour abgeschlossen.")
+                                mRobot?.removeOnGoToLocationStatusChangedListener(this)
+                            }
                         }
                     }
                     else -> {
                         // Behandlung anderer Status wie START, CALCULATING, GOING, REPOSING
-                        Log.d("MainActivity", "Unhandled status: $status at location: $location")
+                        Log.d(TAG, "Nicht behandelter Status: $status bei $location")
                     }
                 }
             }
@@ -211,24 +210,24 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
         // Starte die Tour zur ersten Location und sage das an
         if (route.isNotEmpty()) {
-            val firstLocation = route[currentIndex]
-            try {
-                speakText("Ich starte die Tour und navigiere zu $firstLocation.")
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Fehler beim Ausführen von speakText: ${e.localizedMessage}")
-            }
-            mRobot?.addOnRobotReadyListener(object : OnRobotReadyListener {
-                override fun onRobotReady(isReady: Boolean) {
-                    if (isReady) {
-                        mRobot?.goTo(firstLocation)
-                    } else {
-                        Log.e("MainActivity", "Roboter nicht verbunden.")
-                    }
-                    // Entferne den Listener nach der Überprüfung
-                    mRobot?.removeOnRobotReadyListener(this)
-                }
-            })
+            navigateToNextLocation()
+        } else {
+            Log.w(TAG, "Die Route ist leer, Tour kann nicht gestartet werden.")
         }
+    }
+
+    // Navigiert zur nächsten Location in der Route
+    private fun navigateToNextLocation() {
+        val nextLocation = route[currentIndex]
+        Log.i(TAG, "Navigiere zu: $nextLocation")
+
+        try {
+            speakText("Ich navigiere jetzt zu $nextLocation.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Fehler bei speakText (nächster Standort): ${e.localizedMessage}")
+        }
+
+        mRobot?.goTo(nextLocation)
     }
 
     override fun onDestroy() {

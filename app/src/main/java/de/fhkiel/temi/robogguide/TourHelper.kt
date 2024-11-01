@@ -1,20 +1,18 @@
 package de.fhkiel.temi.robogguide
-import android.content.Context
+
 import android.util.Log
 import de.fhkiel.temi.robogguide.database.DatabaseHelper
 import org.json.JSONObject
-import java.io.IOException
 
 class TourHelper(private val database: DatabaseHelper) {
 
     private var currentLocationId: String? = null // Speichert die aktuelle Position des Roboters
     private val route: MutableList<String> = mutableListOf() // Array zum Speichern der Locations in der Reihenfolge
 
-    // Methode zum Ermitteln des Startpunkts (ohne die Route zu planen)
+    // Methode zum Ermitteln des Startpunkts für die vollständige Route (ohne die Route zu planen)
     fun getStartingPoint(listOfLocations: Map<String, JSONObject>): String {
         val startIds = mutableListOf<String>()
 
-        // Bestimme die `location_from` ohne passende `location_to` als Startpunkt
         listOfLocations.forEach { (_, jsonObject) ->
             val fromId = jsonObject.optString("location_from")
             var isStart = true
@@ -30,7 +28,6 @@ class TourHelper(private val database: DatabaseHelper) {
             }
         }
 
-        // Falls ein Startpunkt gefunden wurde, setze ihn als aktuellen Standort und gib seinen Namen zurück
         return if (startIds.isNotEmpty()) {
             currentLocationId = startIds[0]
             getLocationName(currentLocationId!!).also {
@@ -42,9 +39,8 @@ class TourHelper(private val database: DatabaseHelper) {
         }
     }
 
-    // Methode zum Initialisieren des Startpunkts und Festlegen der Route
+    // Methode zum Initialisieren der vollständigen Tour
     fun initializeAndPlanRoute(listOfLocations: Map<String, JSONObject>): List<String> {
-        // Verwende `getStartingPoint`, um den Startpunkt zu bestimmen und setze `currentLocationId`
         val startingPointName = getStartingPoint(listOfLocations)
         if (startingPointName.isNotEmpty()) {
             route.add(startingPointName) // Füge den Startpunkt zur Route hinzu
@@ -53,17 +49,15 @@ class TourHelper(private val database: DatabaseHelper) {
         return route
     }
 
-    // Methode zur Ermittlung der Route
+    // Methode zur Ermittlung der vollständigen Route
     private fun findRoute(listOfLocations: Map<String, JSONObject>) {
         var nextLocationId: String? = currentLocationId
 
         while (nextLocationId != null) {
-            // Suche die `location_to` für die aktuelle `location_from`
             val nextTransfer = listOfLocations.values.firstOrNull { it.optString("location_from") == nextLocationId }
             nextLocationId = nextTransfer?.optString("location_to", null)
 
             if (nextLocationId != null) {
-                // Hole den Namen der `location_to` und füge ihn der Route hinzu
                 val locationName = getLocationName(nextLocationId)
                 if (locationName.isNotEmpty()) {
                     route.add(locationName)
@@ -82,5 +76,50 @@ class TourHelper(private val database: DatabaseHelper) {
 
         return locations.values.firstOrNull()?.optString("name", "") ?: ""
     }
-}
 
+    // Nur wichtige Locations für eine alternative Tour
+    fun initializeAndPlanImportantRoute(): List<String> {
+        val importantRoute = mutableListOf<String>()
+        val importantLocations = getImportantLocations()
+
+        // Bestimme den Startpunkt der wichtigen Tour
+        val startingPointName = getStartingPoint(importantLocations)
+        if (startingPointName.isNotEmpty()) {
+            importantRoute.add(startingPointName) // Füge den Startpunkt zur wichtigen Route hinzu
+            findImportantRoute(importantLocations, importantRoute) // Plane die Route nur mit wichtigen Locations
+        }
+
+        return importantRoute
+    }
+
+    // Methode zur Ermittlung der Route nur mit wichtigen Locations
+    private fun findImportantRoute(importantLocations: Map<String, JSONObject>, importantRoute: MutableList<String>) {
+        var nextLocationId: String? = currentLocationId
+
+        while (nextLocationId != null) {
+            val nextTransfer = importantLocations.values.firstOrNull { it.optString("location_from") == nextLocationId }
+            nextLocationId = nextTransfer?.optString("location_to", null)
+
+            if (nextLocationId != null) {
+                val locationName = getLocationName(nextLocationId)
+                if (locationName.isNotEmpty()) {
+                    importantRoute.add(locationName)
+                    Log.i("TourHelper", "Gefundene nächste wichtige Ziel-Location: $locationName")
+                } else {
+                    Log.e("TourHelper", "Kein Name für wichtige location_to $nextLocationId gefunden.")
+                }
+            }
+        }
+    }
+
+    // Hilfsmethode: Nur wichtige Locations (`important = 1`)
+    private fun getImportantLocations(): Map<String, JSONObject> {
+        val query = """
+            SELECT id, name
+            FROM locations
+            WHERE important = 1
+        """.trimIndent()
+
+        return database.getTableDataAsJsonWithQuery("locations", query)
+    }
+}
