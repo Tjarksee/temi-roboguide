@@ -49,7 +49,23 @@ class TourHelper(private val database: DatabaseHelper) {
         return route
     }
 
-    // Methode zur Ermittlung der vollständigen Route
+    fun initializeAndPlanImportantRoute(): List<String> {
+        val importantLocations = getImportantLocations()
+        Log.d("TourHelper", "Geladene wichtige Locations: $importantLocations")
+
+        // Lade die Transfers für die wichtigen Locations
+        val importantTransfers = getImportantTransfers(importantLocations)
+
+        val startingPointName = getStartingPoint(importantTransfers)
+        if (startingPointName.isNotEmpty()) {
+            route.add(startingPointName)
+            findRoute(importantTransfers) // Verwende die gleiche Methode für die Routenplanung
+        }
+
+        Log.i("TourHelper", "Geplante wichtige Route: $route")
+        return route
+    }
+
     private fun findRoute(listOfLocations: Map<String, JSONObject>) {
         var nextLocationId: String? = currentLocationId
 
@@ -73,53 +89,18 @@ class TourHelper(private val database: DatabaseHelper) {
     private fun getLocationName(locationId: String): String {
         val locationQuery = "SELECT * FROM `locations` WHERE `id` = '$locationId'"
         val locations = database.getTableDataAsJsonWithQuery("locations", locationQuery)
-
         return locations.values.firstOrNull()?.optString("name", "") ?: ""
     }
 
-    // Nur wichtige Locations für eine alternative Tour
-    fun initializeAndPlanImportantRoute(): List<String> {
-        val importantRoute = mutableListOf<String>()
-        val importantLocations = getImportantLocations()
-
-        // Bestimme den Startpunkt der wichtigen Tour
-        val startingPointName = getStartingPoint(importantLocations)
-        if (startingPointName.isNotEmpty()) {
-            importantRoute.add(startingPointName) // Füge den Startpunkt zur wichtigen Route hinzu
-            findImportantRoute(importantLocations, importantRoute) // Plane die Route nur mit wichtigen Locations
-        }
-
-        return importantRoute
-    }
-
-    // Methode zur Ermittlung der Route nur mit wichtigen Locations
-    private fun findImportantRoute(importantLocations: Map<String, JSONObject>, importantRoute: MutableList<String>) {
-        var nextLocationId: String? = currentLocationId
-
-        while (nextLocationId != null) {
-            val nextTransfer = importantLocations.values.firstOrNull { it.optString("location_from") == nextLocationId }
-            nextLocationId = nextTransfer?.optString("location_to", null)
-
-            if (nextLocationId != null) {
-                val locationName = getLocationName(nextLocationId)
-                if (locationName.isNotEmpty()) {
-                    importantRoute.add(locationName)
-                    Log.i("TourHelper", "Gefundene nächste wichtige Ziel-Location: $locationName")
-                } else {
-                    Log.e("TourHelper", "Kein Name für wichtige location_to $nextLocationId gefunden.")
-                }
-            }
-        }
-    }
-
-    // Hilfsmethode: Nur wichtige Locations (`important = 1`)
     private fun getImportantLocations(): Map<String, JSONObject> {
-        val query = """
-            SELECT id, name
-            FROM locations
-            WHERE important = 1
-        """.trimIndent()
-
+        val query = "SELECT * FROM locations WHERE important = 1"
         return database.getTableDataAsJsonWithQuery("locations", query)
+    }
+
+    // Neue Methode, um nur die Transfers für wichtige Locations zu erhalten
+    private fun getImportantTransfers(importantLocations: Map<String, JSONObject>): Map<String, JSONObject> {
+        val locationIds = importantLocations.keys.joinToString(",") { "'$it'" }
+        val query = "SELECT * FROM transfers WHERE location_from IN ($locationIds) AND location_to IN ($locationIds)"
+        return database.getTableDataAsJsonWithQuery("transfers", query)
     }
 }
