@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         } catch (e: IOException) {
             e.printStackTrace()
         }
-        tourHelper = TourHelper(database)
+        tourHelper = TourHelper(database,this)
         val transfers = database.getTransferDataAsJson()
         Log.d("MainActivity", "Loaded transfers from DB: $transfers")
 
@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
             val listOfLocations = database.getTransferDataAsJson()
 
             // Wähle die richtige Route basierend auf dem RadioButton
-            route = if (selectedTourType.id == R.id.shortTour) {
+            if (selectedTourType.id == R.id.shortTour) {
                 // Wenn kurze Tour (nur wichtige Locations) ausgewählt ist
                 tourHelper.initializeAndPlanImportantRoute()
             } else {
@@ -78,15 +78,14 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
                 tourHelper.initializeAndPlanRoute(listOfLocations)
             }
 
-            if (route.isNotEmpty()) {
-                startTour() // Starte die entsprechende Tour
+            if (tourHelper.route.isNotEmpty()) {
+                tourHelper.startTour() // Starte die entsprechende Tour
             } else {
                 Log.e(TAG, "Keine gültige Route gefunden, Navigation nicht möglich.")
             }
 
             // Wechsle zu ExecutionActivity, nachdem die Tour gestartet wurde
-            intent = Intent(this, ExecutionActivity::class.java)
-            startActivity(intent)
+
         }
 
 

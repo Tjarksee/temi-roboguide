@@ -38,7 +38,7 @@ class IndividualGuideActivity : AppCompatActivity() {
         // Initialisiere die Datenbank und den TourHelper
         database = DatabaseHelper.getInstance(this, "roboguide.db")
         database.initializeDatabase()
-        tourHelper = TourHelper(database)
+        tourHelper = TourHelper(database,this)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.individual_guide_view)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -90,9 +90,9 @@ class IndividualGuideActivity : AppCompatActivity() {
         // Starte die individuelle Tour
         findViewById<Button>(R.id.btnStart).setOnClickListener {
             if (selectedItems.isNotEmpty()) {
-                route = tourHelper.planIndividualRoute(selectedItems)
-                if (route.isNotEmpty()) {
-                    startTour()
+                tourHelper.planIndividualRoute(selectedItems)
+                if (tourHelper.route.isNotEmpty()) {
+                    tourHelper.startTour()
                 } else {
                     Log.e(TAG, "Keine gültige Route gefunden, Navigation nicht möglich.")
                 }
