@@ -69,9 +69,12 @@ class TourHelper(private val database: DatabaseHelper) {
 
     // Methode zur Planung einer individuellen Route
     fun planIndividualRoute(selectedLocations: List<String>): List<String> {
-            val locationNames = selectedLocations.mapNotNull { id -> getLocationName(id) }
+        // Leere die `route`-Liste, bevor die neue Route geplant wird
+        route.clear()
 
-            val selectedTransfers = getTransfersForSelectedLocations(locationNames)
+        val locationNames = selectedLocations.mapNotNull { id -> getLocationName(id) }
+
+        val selectedTransfers = getTransfersForSelectedLocations(locationNames)
         if (selectedTransfers.isEmpty()) {
             Log.e("TourHelper", "Keine Transfers für die individuellen Locations gefunden.")
         } else {
@@ -90,6 +93,7 @@ class TourHelper(private val database: DatabaseHelper) {
         Log.i("TourHelper", "Final route including unconnected locations: $route")
         return route
     }
+
 
     private fun findRoute(listOfLocations: Map<String, JSONObject>) {
         var nextLocationId: String? = currentLocationId
