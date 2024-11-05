@@ -132,6 +132,7 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
             locationIndex++
             if(itemText!=null){
                 val itemMedia = database.getTableDataAsJsonWithQuery("media", "SELECT * FROM media WHERE id = '${itemText["id"]}'")
+                //to do heir text und bild anzeigen
                 speakText(itemText["text"].toString())
             }else{
 
