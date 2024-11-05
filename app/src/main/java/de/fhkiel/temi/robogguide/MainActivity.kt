@@ -71,20 +71,12 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
             // Wähle die richtige Route basierend auf dem RadioButton
             if (selectedTourType.id == R.id.shortTour) {
-                // Wenn kurze Tour (nur wichtige Locations) ausgewählt ist
-                tourHelper.initializeAndPlanImportantRoute()
+                Log.i(TAG,"Kurze Tour wurde gestartet")
+                tourHelper.startShortTour()
             } else {
-                // Wenn lange Tour (alle Locations) ausgewählt ist
-                tourHelper.initializeAndPlanRoute(listOfLocations)
+                Log.i(TAG,"Lange tour wurde gestartet")
+                tourHelper.startLongTour()
             }
-
-            if (tourHelper.route.isNotEmpty()) {
-                tourHelper.startTour() // Starte die entsprechende Tour
-            } else {
-                Log.e(TAG, "Keine gültige Route gefunden, Navigation nicht möglich.")
-            }
-
-            // Wechsle zu ExecutionActivity, nachdem die Tour gestartet wurde
 
         }
 

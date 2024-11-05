@@ -90,7 +90,7 @@ class IndividualGuideActivity : AppCompatActivity() {
         // Starte die individuelle Tour
         findViewById<Button>(R.id.btnStart).setOnClickListener {
             if (selectedItems.isNotEmpty()) {
-                tourHelper.planIndividualRoute(selectedItems)
+                tourHelper.setIndividualRoute(selectedItems)
                 if (tourHelper.route.isNotEmpty()) {
                     tourHelper.startTour()
                 } else {
@@ -104,84 +104,6 @@ class IndividualGuideActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnBack).setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
-        }
-    }
-
-    // Startet die Tour mit den ausgewählten Locations
-    private fun startTour() {
-        currentIndex = 0
-        mRobot = Robot.getInstance()
-        Log.i(TAG, "Individuelle Tour gestartet.")
-
-        val listener = object : OnGoToLocationStatusChangedListener {
-            override fun onGoToLocationStatusChanged(location: String, status: String, descriptionId: Int, description: String) {
-                Log.d(TAG, "Statusänderung bei $location - Status: $status, Beschreibung: $description")
-
-                when (status) {
-                    "complete" -> {
-                        Log.i(TAG, "Position erreicht: $location")
-                        speakText("Ich bin bei $location angekommen.")
-                        currentIndex++
-                        if (currentIndex < route.size) {
-                            navigateToNextLocation()
-                        } else {
-                            Log.i(TAG, "Tour abgeschlossen.")
-                            speakText("Die Tour ist abgeschlossen.")
-                            mRobot?.removeOnGoToLocationStatusChangedListener(this)
-                        }
-                    }
-                    "abort" -> retryNavigation(location, this)
-                    else -> Log.d(TAG, "Nicht behandelter Status: $status bei $location")
-                }
-            }
-        }
-
-        mRobot?.addOnGoToLocationStatusChangedListener(listener)
-        if (route.isNotEmpty()) {
-            navigateToNextLocation()
-        } else {
-            Log.w(TAG, "Die Route ist leer, Tour kann nicht gestartet werden.")
-        }
-    }
-
-    // Navigiert zur nächsten Location in der Route
-    private fun navigateToNextLocation() {
-        val nextLocation = route[currentIndex]
-        Log.i(TAG, "Navigiere zu: $nextLocation")
-        speakText("Ich navigiere jetzt zu $nextLocation.")
-        mRobot?.goTo(nextLocation)
-    }
-
-    // Versucht, die Navigation bei einem Abbruch neu zu starten
-    private fun retryNavigation(location: String, listener: OnGoToLocationStatusChangedListener) {
-        var retryCount = 0
-        val maxRetries = 3
-        val retryDelayMillis = 5000L
-
-        if (retryCount < maxRetries) {
-            retryCount++
-            Log.w(TAG, "Navigation zu $location abgebrochen. Versuch $retryCount von $maxRetries in ${retryDelayMillis / 1000} Sekunden.")
-            Handler(Looper.getMainLooper()).postDelayed({
-                mRobot?.goTo(location)
-            }, retryDelayMillis)
-        } else {
-            Log.e(TAG, "Navigation zu $location fehlgeschlagen nach $maxRetries Versuchen. Fortsetzung der Tour.")
-            retryCount = 0
-            currentIndex++
-            if (currentIndex < route.size) {
-                navigateToNextLocation()
-            } else {
-                Log.i(TAG, "Tour abgeschlossen.")
-                mRobot?.removeOnGoToLocationStatusChangedListener(listener)
-            }
-        }
-    }
-
-    // Gibt Text über den Temi-Roboter aus
-    private fun speakText(text: String, isShowOnConversationLayer: Boolean = true) {
-        mRobot?.let { robot ->
-            val ttsRequest: TtsRequest = TtsRequest.create(speech = text, isShowOnConversationLayer = isShowOnConversationLayer)
-            robot.speak(ttsRequest)
         }
     }
 
