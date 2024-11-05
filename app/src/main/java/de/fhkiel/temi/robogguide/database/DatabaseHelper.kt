@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
+import de.fhkiel.temi.robogguide.Location
 import de.fhkiel.temi.robogguide.TourHelper
 import org.json.JSONObject
 import java.io.File
@@ -245,6 +246,43 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
 
         Log.d("DatabaseHelper", "Loaded JSON data: $jsonMap")
         return jsonMap
+    }
+
+
+    fun getLocationName(locationId: String): String {
+        val locationQuery = "SELECT * FROM `locations` WHERE `id` = '$locationId'"
+        val locations = getTableDataAsJsonWithQuery("locations", locationQuery)
+        return locations.values.firstOrNull()?.optString("name", "")?.lowercase() ?: ""
+    }
+
+    fun getImportantLocations(): Collection<JSONObject>{
+        val query = "SELECT * FROM locations WHERE important = 1"
+        return getTableDataAsJsonWithQuery("locations", query).values
+    }
+
+    fun getItems(locationsId: String): List<JSONObject?>{
+        val query = "SELECT * FROM items WHERE locations_id = $locationsId"
+        return getTableDataAsJsonWithQuery("items",query).values.toList()
+    }
+
+    fun getLocations(): Collection<JSONObject?> {
+        val query = "SELECT * FROM locations"
+        return getTableDataAsJsonWithQuery("locations", query).values
+    }
+
+    fun getTransferId(fromId : String) : String{
+        val query = "SELECT * FROM transfers WHERE location_from = '$fromId'"
+        val test = getTableDataAsJsonWithQuery("transfers", query)
+        return test.values.firstOrNull()?.get("id").toString()
+    }
+
+    fun getTransferText(location: Location) : JSONObject? {
+        val query = "SELECT * FROM texts WHERE transfers_id = '${location.transferId}'"
+        return getTableDataAsJsonWithQuery("texts", query).values.firstOrNull()
+    }
+    fun getItemTexts(itemId : String) : JSONObject? {
+        val query = "SELECT * FROM texts WHERE items_id = $itemId"
+        return getTableDataAsJsonWithQuery("texts", query).values.firstOrNull()
     }
 
 

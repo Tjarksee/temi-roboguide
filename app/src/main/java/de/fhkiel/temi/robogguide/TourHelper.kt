@@ -1,7 +1,6 @@
 package de.fhkiel.temi.robogguide
 
 import android.content.Context
-import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -28,17 +27,17 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         route.clear()
         val locationList : MutableList<Location> = mutableListOf()
         for(location in selectedLocationIds){
-            val locationName = getLocationName(location)
-            val transferId = getTransferId(location)
+            val locationName = database.getLocationName(location)
+            val transferId = database.getTransferId(location)
             locationList.add(Location(locationName,transferId,location))
         }
         route = locationList
     }
 
     fun startLongTour(){
-        val listOfLocations = getLocations()
+        val listOfLocations = database.getLocations()
         for (location in listOfLocations) {
-            val transferId = location?.get("id")?.let { getTransferId(it.toString()) }
+            val transferId = location?.get("id")?.let { database.getTransferId(it.toString()) }
             route.add(Location(location?.get("name").toString(),transferId, location?.get("id").toString()))
             Log.i(TAG,"lange route geplant")
         }
@@ -46,9 +45,9 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
     }
 
     fun startShortTour(){
-        val listOfLocations = getImportantLocations()
+        val listOfLocations = database.getImportantLocations()
         for (location in listOfLocations) {
-            val transferId = getTransferId(location.get("id").toString())
+            val transferId = database.getTransferId(location.get("id").toString())
             route.add(Location(location.get("name").toString(),transferId, location.get("id").toString()))
             Log.i(TAG,"lange route geplant")
         }
@@ -85,7 +84,7 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
             }
             fromLocationId = nextLocation["location_to"].toString()
         }
-
+        route = rightOderList
     }
 
     private fun getTransfers() : Collection<JSONObject>{
@@ -95,7 +94,7 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
 
     private fun getStartingPoint(listOfLocations: Collection<JSONObject>): Location {
         val startLocations = mutableListOf<Location>()
-        var isStart = false
+        var isStart: Boolean
         for(location in listOfLocations){
             val locationFrom = location["location_from"].toString()
             isStart= true
@@ -110,7 +109,7 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
 
         }
         if(startLocations.isNotEmpty()){
-            startLocations[0].name = getLocationName(startLocations[0].locationId!!)
+            startLocations[0].name = database.getLocationName(startLocations[0].locationId!!)
             Log.i("Tour-Helper","The starting Point has the name ${startLocations[0].name}")
             return startLocations[0]}
 
@@ -122,62 +121,39 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
 
     }
 
-    private fun getLocationName(locationId: String): String {
-        val locationQuery = "SELECT * FROM `locations` WHERE `id` = '$locationId'"
-        val locations = database.getTableDataAsJsonWithQuery("locations", locationQuery)
-        return locations.values.firstOrNull()?.optString("name", "")?.lowercase() ?: ""
-    }
-
-    private fun getImportantLocations(): Collection<JSONObject>{
-        val query = "SELECT * FROM locations WHERE important = 1"
-        return database.getTableDataAsJsonWithQuery("locations", query).values
-    }
-
-    private fun getItems(locationsId: String): List<JSONObject?>{
-        val query = "SELECT * FROM items WHERE locations_id = $locationsId"
-        return database.getTableDataAsJsonWithQuery("items",query).values.toList()
-    }
-
-    private fun getLocations(): Collection<JSONObject?> {
-        val query = "SELECT * FROM locations"
-        return database.getTableDataAsJsonWithQuery("locations", query).values
-    }
-
-    private fun getTransferId(fromId : String) : String{
-        val query = "SELECT * FROM transfers WHERE location_from = '$fromId'"
-        val test = database.getTableDataAsJsonWithQuery("transfers", query)
-        return test.values.firstOrNull()?.get("id").toString()
-    }
-
-    private fun getTransferText(location: Location) : JSONObject? {
-        val query = "SELECT * FROM texts WHERE transfers_id = '${location.transferId}'"
-        return database.getTableDataAsJsonWithQuery("texts", query).values.firstOrNull()
-    }
-    private fun getItemTexts(itemId : String) : JSONObject? {
-        val query = "SELECT * FROM texts WHERE items_id = $itemId"
-        return database.getTableDataAsJsonWithQuery("texts", query).values.firstOrNull()
-    }
 
     private fun activityForLocation(){
-        val items = getItems(route[currentIndex].locationId!!)
-        if(items.size < locationIndex){
+        val items = database.getItems(route[currentIndex].locationId!!)
+        if(items.size == locationIndex){
             atLocation = false
             navigateToNextLocation()
         }else{
-            val itemText = getItemTexts(items[locationIndex]?.get("id").toString())
-            val itemMedia = database.getTableDataAsJsonWithQuery("transfers", "SELECT * FROM media WHERE text_id = '${itemText?.get("text_id")}'")
+            val itemText = database.getItemTexts(items[locationIndex]?.get("id").toString())
+            locationIndex++
+            if(itemText!=null){
+                val itemMedia = database.getTableDataAsJsonWithQuery("media", "SELECT * FROM media WHERE id = '${itemText["id"]}'")
+                speakText(itemText["text"].toString())
+            }else{
 
-            //hier zeige die sachen an
+                speakText("hierfür habe ich leider keinen text")
+            }
 
-            val ttsRequest = TtsRequest.create(itemText?.get("text").toString(), true)
-            mRobot?.speak(ttsRequest)
         }
     }
 
+    private fun executeTour(){
+        setLocationListener()
+        isSpeechCompleted = true
+        isNavigationCompleted = false
+        goToFirstLocation()
 
+    }
 
+    private fun goToFirstLocation(){
+        mRobot?.goTo(route[0].name.toString())
+    }
 
-    private fun executeTour() {
+    private fun setLocationListener() {
         mRobot = Robot.getInstance()
         Log.i(TAG, "Individuelle Tour gestartet.")
 
@@ -187,46 +163,43 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
 
                 when (status) {
                     "complete" -> {
-                        Log.i(TAG, "Position erreicht: $location")
-                        speakText("Ich bin bei $location angekommen.")
-                        currentIndex++
-                        if (currentIndex < route.size) {
-                            navigateToNextLocation()
-                        } else {
-                            Log.i(TAG, "Tour abgeschlossen.")
-                            speakText("Die Tour ist abgeschlossen.")
-                            mRobot?.removeOnGoToLocationStatusChangedListener(this)
-
-                        }
+                        isNavigationCompleted = true
+                        checkMovementAndSpeechStatus()
                     }
                     "abort" -> retryNavigation(location, this)
                     else -> Log.d(TAG, "Nicht behandelter Status: $status bei $location")
                 }
             }
         }
-
         mRobot?.addOnGoToLocationStatusChangedListener(listener)
-        if (route.isNotEmpty()) {
-            navigateToNextLocation()
-        } else {
-            Log.w(TAG, "Die Route ist leer, Tour kann nicht gestartet werden.")
-        }
-        val intent = Intent(context, ExecutionActivity::class.java)
-        context.startActivity(intent)
     }
 
 
 
     // Navigiert zur nächsten Location in der Route
     private fun navigateToNextLocation() {
+        currentIndex++
         val nextLocation = route[currentIndex]
-        val text = getTransferText(nextLocation)
+        val text = database.getTransferText(nextLocation)
+        //to do hier text anzeigen
+
         if(text?.get("text") != null){
+            isSpeechCompleted = false
             speakText(text["text"].toString())
+        }else{
+            isSpeechCompleted = true
         }
         Log.i(TAG, "Navigiere zu: $nextLocation")
+        isNavigationCompleted = false
         mRobot?.goTo(nextLocation.name.toString())
 
+    }
+
+    private fun checkMovementAndSpeechStatus() {
+        if(isSpeechCompleted && isNavigationCompleted){
+            atLocation = true
+            activityForLocation()
+        }
     }
 
     // Versucht, die Navigation bei einem Abbruch neu zu starten
@@ -244,8 +217,11 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         } else {
             Log.e(TAG, "Navigation zu $location fehlgeschlagen nach $maxRetries Versuchen. Fortsetzung der Tour.")
             retryCount = 0
-            currentIndex++
-            if (currentIndex < route.size) {
+            if (currentIndex+1 < route.size) {
+                speakText("ich konnte die location nicht erreichen", true)
+                atLocation = false
+                isNavigationCompleted =false
+                isSpeechCompleted = false
                 navigateToNextLocation()
             } else {
                 Log.i(TAG, "Tour abgeschlossen.")
@@ -258,22 +234,8 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
     private fun speakText(text: String, isShowOnConversationLayer: Boolean = true) {
         mRobot?.let { robot ->
             val ttsRequest: TtsRequest = TtsRequest.create(speech = text, isShowOnConversationLayer = isShowOnConversationLayer)
+            onTtsStatusChanged(ttsRequest)
             robot.speak(ttsRequest)
-        }
-    }
-
-    companion object {
-        private const val EXTRA_LOCATIONS = "extra_locations"
-
-        // Methode zum Erstellen eines Intents mit den übergebenen Daten
-        fun newIntent(context: Context, locations: Map<String, JSONObject>): Intent {
-            val intent = Intent(context, IndividualGuideActivity::class.java)
-            val locationsMap = HashMap<String, String>()
-            locations.forEach { (key, jsonObject) ->
-                locationsMap[key] = jsonObject.toString()
-            }
-            intent.putExtra(EXTRA_LOCATIONS, locationsMap)
-            return intent
         }
     }
 
@@ -281,9 +243,16 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         if(ttsRequest.status==TtsRequest.Status.COMPLETED){
             Log.i(TAG,"speech completed")
             if(atLocation){
+                mRobot?.removeTtsListener(this)
                 activityForLocation()
+            }else {
+                mRobot?.removeTtsListener(this)
+                isSpeechCompleted = true
+                checkMovementAndSpeechStatus()
             }
-            isSpeechCompleted = true
         }
+        mRobot?.addTtsListener(this)
     }
+
+
 }
