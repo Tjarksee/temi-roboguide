@@ -1,6 +1,7 @@
 package de.fhkiel.temi.robogguide
 
 import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -237,6 +238,10 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
             val ttsRequest: TtsRequest = TtsRequest.create(speech = text, isShowOnConversationLayer = isShowOnConversationLayer)
             onTtsStatusChanged(ttsRequest)
             robot.speak(ttsRequest)
+            // Sende den Text als Broadcast, um ihn in ExecutionActivity anzuzeigen
+            val intent = Intent("ACTION_UPDATE_SPOKEN_TEXT")
+            intent.putExtra("EXTRA_SPOKEN_TEXT", text)
+            context.sendBroadcast(intent)
         }
     }
 

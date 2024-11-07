@@ -77,6 +77,9 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
                 Log.i(TAG,"Lange tour wurde gestartet")
                 tourHelper.startLongTour()
             }
+            // Starte die ExecutionActivity nach dem Tourstart
+            val intent = Intent(this, ExecutionActivity::class.java)
+            startActivity(intent)
 
         }
 
