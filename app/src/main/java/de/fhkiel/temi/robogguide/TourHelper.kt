@@ -1,9 +1,11 @@
 package de.fhkiel.temi.robogguide
 
 import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.core.content.ContextCompat.startActivity
 import com.robotemi.sdk.Robot
 import com.robotemi.sdk.TtsRequest
 import com.robotemi.sdk.listeners.OnGoToLocationStatusChangedListener
@@ -126,21 +128,26 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         val items = database.getItems(route[currentIndex].locationId!!)
         if(items.size == locationIndex){
             atLocation = false
+            isNavigationCompleted = false
+            isSpeechCompleted = false
             navigateToNextLocation()
         }else{
             val itemText = database.getItemTexts(items[locationIndex]?.get("id").toString())
             locationIndex++
             if(itemText!=null){
                 val itemMedia = database.getTableDataAsJsonWithQuery("media", "SELECT * FROM media WHERE id = '${itemText["id"]}'")
-                //to do heir text und bild anzeigen
-                speakText(itemText["text"].toString())
+                val intent = Intent(context, ExecutionActivity::class.java).apply {
+                    putExtra("EXTRA_URL", itemText["text"].toString())
+                    putExtra("EXTRA_TEXT", itemMedia["url"].toString())
+                }
+                context.startActivity(intent)
             }else{
-
                 speakText("hierfür habe ich leider keinen text")
             }
 
         }
     }
+
 
     private fun executeTour(){
         setLocationListener()
