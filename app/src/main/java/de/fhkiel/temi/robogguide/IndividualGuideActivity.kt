@@ -93,6 +93,8 @@ class IndividualGuideActivity : AppCompatActivity() {
                 tourHelper.setIndividualRoute(selectedItems)
                 if (tourHelper.route.isNotEmpty()) {
                     tourHelper.startTour()
+                    val intent = Intent(this, ExecutionActivity::class.java)
+                    startActivity(intent)
                 } else {
                     Log.e(TAG, "Keine gültige Route gefunden, Navigation nicht möglich.")
                 }

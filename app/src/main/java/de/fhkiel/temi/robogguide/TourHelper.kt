@@ -22,6 +22,7 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
 
     private var locationIndex = 0
     private var currentIndex = 0
+    private var totalLocations = 0
     private val TAG = "TourHelper-Tour"
 
     fun setIndividualRoute(selectedLocationIds : List<String>){
@@ -33,6 +34,7 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
             locationList.add(Location(locationName,transferId,location))
         }
         route = locationList
+        totalLocations = route.size
     }
 
     fun startLongTour(){
@@ -42,6 +44,7 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
             route.add(Location(location?.get("name").toString(),transferId, location?.get("id").toString()))
             Log.i(TAG,"lange route geplant")
         }
+        totalLocations = route.size
         startTour()
     }
 
@@ -52,6 +55,7 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
             route.add(Location(location.get("name").toString(),transferId, location.get("id").toString()))
             Log.i(TAG,"lange route geplant")
         }
+        totalLocations = route.size
         startTour()
     }
 
@@ -133,8 +137,12 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
             locationIndex++
             if(itemText!=null){
                 val itemMedia = database.getTableDataAsJsonWithQuery("media", "SELECT * FROM media WHERE id = '${itemText["id"]}'")
-                //to do heir text und bild anzeigen
+                val mediaUrl = itemMedia["url"].toString()
+
                 speakText(itemText["text"].toString())
+                val intent = Intent("ACTION_UPDATE_MEDIA")
+                intent.putExtra("EXTRA_MEDIA_URL", mediaUrl)
+                context.sendBroadcast(intent)
             }else{
 
                 speakText("hierfür habe ich leider keinen text")
@@ -183,7 +191,11 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         currentIndex++
         val nextLocation = route[currentIndex]
         val text = database.getTransferText(nextLocation)
-        //to do hier text anzeigen
+        val progress = ((currentIndex + 1) * 100) / totalLocations
+        val intent = Intent("ACTION_UPDATE_PROGRESS")
+        intent.putExtra("EXTRA_PROGRESS", progress)
+        context.sendBroadcast(intent)
+
 
         if(text?.get("text") != null){
             isSpeechCompleted = false
@@ -233,11 +245,12 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
     }
 
     // Gibt Text über den Temi-Roboter aus
-    private fun speakText(text: String, isShowOnConversationLayer: Boolean = true) {
+    private fun speakText(text: String, isShowOnConversationLayer: Boolean = false) {
         mRobot?.let { robot ->
-            val ttsRequest: TtsRequest = TtsRequest.create(speech = text, isShowOnConversationLayer = isShowOnConversationLayer)
+            val ttsRequest: TtsRequest = TtsRequest.create(speech = text, isShowOnConversationLayer = false)
             onTtsStatusChanged(ttsRequest)
             robot.speak(ttsRequest)
+
             // Sende den Text als Broadcast, um ihn in ExecutionActivity anzuzeigen
             val intent = Intent("ACTION_UPDATE_SPOKEN_TEXT")
             intent.putExtra("EXTRA_SPOKEN_TEXT", text)
