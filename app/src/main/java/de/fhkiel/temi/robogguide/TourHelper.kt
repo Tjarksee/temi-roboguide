@@ -19,51 +19,63 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
     private var isNavigationCompleted = false
     private var isSpeechCompleted = false
     private var atLocation = false
-
     private var locationIndex = 0
     private var currentIndex = 0
     private var totalLocations = 0
     private val TAG = "TourHelper-Tour"
+    private val maxRetries = 3
+    private val retryDelayMillis = 5000L
+    private var locationStatusListener: OnGoToLocationStatusChangedListener? = null
 
-    fun setIndividualRoute(selectedLocationIds : List<String>){
+    init {
+        mRobot = Robot.getInstance()
+    }
+
+    fun setIndividualRoute(selectedLocationIds: List<String>) {
         route.clear()
-        val locationList : MutableList<Location> = mutableListOf()
-        for(location in selectedLocationIds){
+        val locationList: MutableList<Location> = mutableListOf()
+        for (location in selectedLocationIds) {
             val locationName = database.getLocationName(location)
             val transferId = database.getTransferId(location)
-            locationList.add(Location(locationName,transferId,location))
+            locationList.add(Location(locationName, transferId, location))
         }
         route = locationList
         totalLocations = route.size
+        Log.d(TAG, "setIndividualRoute aufgerufen mit ${selectedLocationIds.size} Standorten.")
     }
 
-    fun startLongTour(){
+    fun startLongTour() {
         val listOfLocations = database.getLocations()
         for (location in listOfLocations) {
             val transferId = location?.get("id")?.let { database.getTransferId(it.toString()) }
-            route.add(Location(location?.get("name").toString(),transferId, location?.get("id").toString()))
-            Log.i(TAG,"lange route geplant")
+            route.add(Location(location?.get("name").toString(), transferId, location?.get("id").toString()))
+            Log.i(TAG, "Lange Route geplant.")
         }
         totalLocations = route.size
+        Log.d(TAG, "startLongTour mit ${route.size} Standorten initialisiert.")
         startTour()
     }
 
-    fun startShortTour(){
+
+
+    fun startShortTour() {
         val listOfLocations = database.getImportantLocations()
         for (location in listOfLocations) {
             val transferId = database.getTransferId(location.get("id").toString())
-            route.add(Location(location.get("name").toString(),transferId, location.get("id").toString()))
-            Log.i(TAG,"lange route geplant")
+            route.add(Location(location.get("name").toString(), transferId, location.get("id").toString()))
+            Log.i(TAG, "Kurze Route geplant.")
         }
         totalLocations = route.size
+        Log.d(TAG, "startShortTour mit ${route.size} Standorten initialisiert.")
         startTour()
     }
 
-    fun startTour(){
+    fun startTour() {
         planRightOrder()
         currentIndex = 0
         Log.i(TAG, "Individuelle Tour gestartet.")
-        executeTour()
+        setLocationListener()
+        goToFirstLocation()
     }
 
     private fun planRightOrder(){
@@ -126,30 +138,49 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
 
     }
 
+    private fun activityForLocation() {
+        // Überprüfen, ob currentIndex den Bereich der route-Liste überschreitet
+        if (currentIndex >= route.size) {
+            Log.w(TAG, "currentIndex $currentIndex ist außerhalb des Bereichs der Route-Liste (${route.size} Elemente). Beende die Tour.")
+            endTour()
+            return
+        }
 
-    private fun activityForLocation(){
         val items = database.getItems(route[currentIndex].locationId!!)
-        if(items.size == locationIndex){
-            atLocation = false
-            navigateToNextLocation()
-        }else{
-            val itemText = database.getItemTexts(items[locationIndex]?.get("id").toString())
-            locationIndex++
-            if(itemText!=null){
-                val itemMedia = database.getTableDataAsJsonWithQuery("media", "SELECT * FROM media WHERE id = '${itemText["id"]}'")
-                val mediaUrl = itemMedia["url"].toString()
+        Log.d(TAG, "Anzahl der Items für Location ${route[currentIndex].locationId}: ${items.size}, aktueller locationIndex: $locationIndex")
 
-                speakText(itemText["text"].toString())
+        if (locationIndex >= items.size) {
+            Log.w(TAG, "locationIndex $locationIndex ist außerhalb des Bereichs der Item-Liste (${items.size} Elemente). Wechsle zur nächsten Location.")
+            atLocation = false
+            locationIndex = 0 // Setze den Index für die nächste Location zurück
+            navigateToNextLocation()
+            return
+        }
+
+        val itemText = database.getItemTexts(items[locationIndex]?.get("id").toString())
+        locationIndex++ // Erhöht locationIndex für das nächste Item
+
+        if (itemText != null) {
+            val mediaUrl = database.getMedia(itemText["id"].toString()) // Verwende die neue getMedia-Methode
+
+            if (mediaUrl != null) {
+                Log.i(TAG, "Medien-URL gefunden für Text ${itemText["id"]}: $mediaUrl")
                 val intent = Intent("ACTION_UPDATE_MEDIA")
                 intent.putExtra("EXTRA_MEDIA_URL", mediaUrl)
                 context.sendBroadcast(intent)
-            }else{
-
-                speakText("hierfür habe ich leider keinen text")
+            } else {
+                Log.w(TAG, "Keine Medien-URL gefunden für Text ${itemText["id"]}")
             }
 
+            speakText(itemText["text"].toString())
+        } else {
+            Log.w(TAG, "Kein Text gefunden für Item bei Location ${route[currentIndex].locationId}")
+            speakText("Hierfür habe ich leider keinen Text.")
         }
     }
+
+
+
 
     private fun executeTour(){
         setLocationListener()
@@ -159,119 +190,112 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
 
     }
 
-    private fun goToFirstLocation(){
-        mRobot?.goTo(route[0].name.toString())
+    // Gehe zur ersten Location in der Route
+    private fun goToFirstLocation() {
+        if (route.isNotEmpty()) {
+            mRobot?.goTo(route[0].name.toString())
+        } else {
+            Log.w(TAG, "Die Route ist leer, Tour kann nicht gestartet werden.")
+        }
     }
 
+    // Listener für den Status der Standortänderung
     private fun setLocationListener() {
-        mRobot = Robot.getInstance()
-        Log.i(TAG, "Individuelle Tour gestartet.")
-
-        val listener = object : OnGoToLocationStatusChangedListener {
+        locationStatusListener = object : OnGoToLocationStatusChangedListener {
             override fun onGoToLocationStatusChanged(location: String, status: String, descriptionId: Int, description: String) {
                 Log.d(TAG, "Statusänderung bei $location - Status: $status, Beschreibung: $description")
 
                 when (status) {
                     "complete" -> {
-                        isNavigationCompleted = true
-                        checkMovementAndSpeechStatus()
+                        retryCount = 0
+                        Log.i(TAG, "Standort erreicht: $location")
+                        handleLocationArrival()
                     }
-                    "abort" -> retryNavigation(location, this)
+                    "abort" -> retryNavigation(location)
                     else -> Log.d(TAG, "Nicht behandelter Status: $status bei $location")
                 }
             }
         }
-        mRobot?.addOnGoToLocationStatusChangedListener(listener)
+        mRobot?.addOnGoToLocationStatusChangedListener(locationStatusListener!!)
     }
 
 
-
-    // Navigiert zur nächsten Location in der Route
+    // Navigiert zur nächsten Location in der Route und zeigt Fortschritt in der ProgressBar an
     private fun navigateToNextLocation() {
         currentIndex++
-        val nextLocation = route[currentIndex]
-        val text = database.getTransferText(nextLocation)
-        val progress = ((currentIndex + 1) * 100) / totalLocations
-        val intent = Intent("ACTION_UPDATE_PROGRESS")
-        intent.putExtra("EXTRA_PROGRESS", progress)
-        context.sendBroadcast(intent)
 
+        if (currentIndex < route.size) {
+            val nextLocation = route[currentIndex]
 
-        if(text?.get("text") != null){
-            isSpeechCompleted = false
-            speakText(text["text"].toString())
-        }else{
-            isSpeechCompleted = true
+            // Aktualisiere den Fortschritt für die ProgressBar und sende ihn als Broadcast
+            val progress = ((currentIndex + 1) * 100) / totalLocations
+            val intent = Intent("ACTION_UPDATE_PROGRESS")
+            intent.putExtra("EXTRA_PROGRESS", progress)
+            context.sendBroadcast(intent)
+
+            Log.i(TAG, "Navigiere zur nächsten Location: ${nextLocation.name}")
+            isNavigationCompleted = false
+            mRobot?.goTo(nextLocation.name.toString())
+        } else {
+            // Beende die Tour, wenn das Ende der Route erreicht ist
+            endTour()
         }
-        Log.i(TAG, "Navigiere zu: $nextLocation")
-        isNavigationCompleted = false
-        mRobot?.goTo(nextLocation.name.toString())
-
     }
 
+
     private fun checkMovementAndSpeechStatus() {
-        if(isSpeechCompleted && isNavigationCompleted){
+        if (isSpeechCompleted && isNavigationCompleted) {
             atLocation = true
             activityForLocation()
         }
     }
 
     // Versucht, die Navigation bei einem Abbruch neu zu starten
-    private fun retryNavigation(location: String, listener: OnGoToLocationStatusChangedListener) {
-
-        val maxRetries = 3
-        val retryDelayMillis = 5000L
-
+    private fun retryNavigation(location: String) {
         if (retryCount < maxRetries) {
             retryCount++
-            Log.w(TAG, "Navigation zu $location abgebrochen. Versuch $retryCount von $maxRetries in ${retryDelayMillis / 1000} Sekunden.")
-            Handler(Looper.getMainLooper()).postDelayed({
-                mRobot?.goTo(location)
-            }, retryDelayMillis)
+            Log.w(TAG, "Navigation zu $location abgebrochen. Versuch $retryCount von $maxRetries.")
+            Handler(Looper.getMainLooper()).postDelayed({ mRobot?.goTo(location) }, retryDelayMillis)
         } else {
-            Log.e(TAG, "Navigation zu $location fehlgeschlagen nach $maxRetries Versuchen. Fortsetzung der Tour.")
             retryCount = 0
-            if (currentIndex+1 < route.size) {
-                speakText("ich konnte die location nicht erreichen", true)
-                atLocation = false
-                isNavigationCompleted =false
-                isSpeechCompleted = false
-                navigateToNextLocation()
-            } else {
-                Log.i(TAG, "Tour abgeschlossen.")
-                mRobot?.removeOnGoToLocationStatusChangedListener(listener)
-            }
+            Log.e(TAG, "Navigation zu $location nach $maxRetries Versuchen fehlgeschlagen. Weiter zur nächsten Location.")
+            navigateToNextLocation()
         }
     }
 
-    // Gibt Text über den Temi-Roboter aus
+    // Sprechen eines Textes über TTS und Senden des Textes an die ExecutionActivity
     private fun speakText(text: String, isShowOnConversationLayer: Boolean = false) {
-        mRobot?.let { robot ->
-            val ttsRequest: TtsRequest = TtsRequest.create(speech = text, isShowOnConversationLayer = false)
+        mRobot?.let {
+            val ttsRequest = TtsRequest.create(speech = text, isShowOnConversationLayer = false)
             onTtsStatusChanged(ttsRequest)
-            robot.speak(ttsRequest)
-
-            // Sende den Text als Broadcast, um ihn in ExecutionActivity anzuzeigen
-            val intent = Intent("ACTION_UPDATE_SPOKEN_TEXT")
-            intent.putExtra("EXTRA_SPOKEN_TEXT", text)
+            it.speak(ttsRequest)
+            val intent = Intent("ACTION_UPDATE_SPOKEN_TEXT").apply {
+                putExtra("EXTRA_SPOKEN_TEXT", text)
+            }
             context.sendBroadcast(intent)
         }
     }
 
+    // TTS-Callback-Handling
     override fun onTtsStatusChanged(ttsRequest: TtsRequest) {
-        if(ttsRequest.status==TtsRequest.Status.COMPLETED){
-            Log.i(TAG,"speech completed")
-            if(atLocation){
-                mRobot?.removeTtsListener(this)
-                activityForLocation()
-            }else {
-                mRobot?.removeTtsListener(this)
-                isSpeechCompleted = true
-                checkMovementAndSpeechStatus()
-            }
+        if (ttsRequest.status == TtsRequest.Status.COMPLETED) {
+            Log.i(TAG, "Sprachausgabe abgeschlossen.")
+            isSpeechCompleted = true
+            checkMovementAndSpeechStatus()
         }
-        mRobot?.addTtsListener(this)
     }
 
+    // Abschluss der Tour und Entfernen des Listeners
+    private fun endTour() {
+        Log.i(TAG, "Tour abgeschlossen.")
+        speakText("Die Tour ist jetzt abgeschlossen.")
+        locationStatusListener?.let { mRobot?.removeOnGoToLocationStatusChangedListener(it) }
+    }
+
+    // Aktionen bei Ankunft an einem Standort
+    private fun handleLocationArrival() {
+        activityForLocation()
+        navigateToNextLocation()
+    }
 
 }

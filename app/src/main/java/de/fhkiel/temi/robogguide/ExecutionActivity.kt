@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
@@ -35,11 +36,13 @@ class ExecutionActivity : AppCompatActivity() {
     private val mediaReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val mediaUrl = intent?.getStringExtra("EXTRA_MEDIA_URL")
+            Log.d("ExecutionActivity", "Empfangene Media URL: $mediaUrl")
             mediaUrl?.let { url ->
                 loadImageFromUrl(url)
             }
         }
     }
+
     private val progressReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val progress = intent?.getIntExtra("EXTRA_PROGRESS", 0) ?: 0
@@ -91,15 +94,19 @@ class ExecutionActivity : AppCompatActivity() {
     private fun loadImageFromUrl(url: String) {
         thread {
             try {
+                Log.d("ExecutionActivity", "Lade Bild von URL: $url")
                 val bitmap = BitmapFactory.decodeStream(URL(url).openStream())
                 runOnUiThread {
+                    Log.d("ExecutionActivity", "Bild erfolgreich geladen von URL: $url")
                     ivAreaImage.setImageBitmap(bitmap)
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("ExecutionActivity", "Fehler beim Laden des Bildes von URL: $url", e)
             }
         }
     }
+
+
     override fun onDestroy() {
         super.onDestroy()
         // Unregister the receiver to avoid memory leaks

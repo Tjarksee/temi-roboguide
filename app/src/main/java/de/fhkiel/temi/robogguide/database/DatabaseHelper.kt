@@ -284,6 +284,11 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
         val query = "SELECT * FROM texts WHERE items_id = $itemId"
         return getTableDataAsJsonWithQuery("texts", query).values.firstOrNull()
     }
+    fun getMedia(textId: String): String? {
+        val query = "SELECT * FROM media WHERE texts_id = '$textId'"
+        val mediaData = getTableDataAsJsonWithQuery("media", query)
+        return mediaData.values.firstOrNull()?.optString("url", null)
+    }
 
 
 
