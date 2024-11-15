@@ -1,17 +1,17 @@
 package de.fhkiel.temi.robogguide
 
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.os.IBinder
 import android.util.Log
 import android.widget.Button
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import androidx.appcompat.app.AppCompatActivity
 import com.robotemi.sdk.Robot
-import com.robotemi.sdk.TtsRequest
-import com.robotemi.sdk.listeners.OnGoToLocationStatusChangedListener
 import com.robotemi.sdk.listeners.OnRobotReadyListener
 import com.robotemi.sdk.map.MapDataModel
 import com.robotemi.sdk.permission.OnRequestPermissionResultListener
@@ -20,16 +20,14 @@ import de.fhkiel.temi.robogguide.database.DatabaseHelper
 import java.io.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import de.fhkiel.temi.robogguide.TourHelper
 
 class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermissionResultListener {
+    private var tourService: TourService? = null
+    private var isBound = false
     private var mRobot: Robot? = null
     private lateinit var database: DatabaseHelper
-    private lateinit var tourHelper: TourHelper
     private var tourLengthGroupSelected = false
     private var textLengthGroupSelected = false
-    private var route: List<String> = listOf()
-    private var currentIndex = 0
     private val TAG = "MainActivity-Tour"
 
     private val singleThreadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
@@ -59,7 +57,6 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         } catch (e: IOException) {
             e.printStackTrace()
         }
-        tourHelper = TourHelper(database,this)
         val transfers = database.getTransferDataAsJson()
         Log.d("MainActivity", "Loaded transfers from DB: $transfers")
 
@@ -67,26 +64,20 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
         findViewById<Button>(R.id.btnStartTour).setOnClickListener {
             val selectedTourType = findViewById<RadioButton>(tourLengthGroup.checkedRadioButtonId)
-            val listOfLocations = database.getTransferDataAsJson()
 
             // Wähle die richtige Route basierend auf dem RadioButton
             if (selectedTourType.id == R.id.shortTour) {
                 Log.i(TAG,"Kurze Tour wurde gestartet")
-                tourHelper.startShortTour()
+               tourService!!.startTour("short")
             } else {
                 Log.i(TAG,"Lange tour wurde gestartet")
-                tourHelper.startLongTour()
+                tourService!!.startTour("long")
             }
             // Starte die ExecutionActivity nach dem Tourstart
             val intent = Intent(this, ExecutionActivity::class.java)
             startActivity(intent)
 
         }
-
-
-
-
-
 
         findViewById<Button>(R.id.btnList).setOnClickListener {
             val locations = database.getLocationDataAsJson()
@@ -105,6 +96,18 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
     }
 
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            val binder = service as TourService.TourBinder
+            tourService = binder.getService()
+            isBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            isBound = false
+            tourService = null
+        }
+    }
 
     private fun checkIfBothSelected(nextButton: Button) {
         if (tourLengthGroupSelected && textLengthGroupSelected) {
@@ -114,114 +117,21 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
     override fun onStart() {
         super.onStart()
+        Intent(this, TourService::class.java).also { intent ->
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
         Robot.getInstance().addOnRobotReadyListener(this)
         Robot.getInstance().addOnRequestPermissionResultListener(this)
     }
 
     override fun onStop() {
         super.onStop()
+        if (isBound) {
+            unbindService(connection)
+            isBound = false
+        }
         Robot.getInstance().removeOnRobotReadyListener(this)
         Robot.getInstance().removeOnRequestPermissionResultListener(this)
-    }
-
-
-
-    // Startet die Tour mit allen Locations in der Route
-    private fun startTour() {
-        currentIndex = 0
-        var retryCount = 0
-        val maxRetries = 3
-        val retryDelayMillis = 5000L // 5 Sekunden Wartezeit
-
-        Log.i(TAG, "Tour gestartet.")
-
-        // Definiere den Listener
-        val listener = object : OnGoToLocationStatusChangedListener {
-            override fun onGoToLocationStatusChanged(
-                location: String,
-                status: String,
-                descriptionId: Int,
-                description: String
-            ) {
-                Log.d(TAG, "Statusänderung bei $location - Status: $status, Beschreibung: $description")
-
-                when (status) {
-                    "complete" -> {
-                        retryCount = 0 // Reset der Wiederholungszähler, wenn Standort erreicht wird
-                        Log.i(TAG, "Position erreicht: $location")
-
-                        try {
-                            speakText("Ich bin bei $location angekommen.")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Fehler bei speakText (Standort erreicht): ${e.localizedMessage}")
-                        }
-
-                        // Weiter zur nächsten Location in der Route
-                        currentIndex++
-                        if (currentIndex < route.size) {
-                            navigateToNextLocation()
-                        } else {
-                            Log.i(TAG, "Tour abgeschlossen.")
-                            try {
-                                speakText("Die Tour ist abgeschlossen.")
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Fehler bei speakText (Tour abgeschlossen): ${e.localizedMessage}")
-                            }
-                            mRobot?.removeOnGoToLocationStatusChangedListener(this)
-                        }
-                    }
-                    "abort" -> {
-                        if (retryCount < maxRetries) {
-                            retryCount++
-                            Log.w(TAG, "Navigation zu $location abgebrochen. Versuch $retryCount von $maxRetries in ${retryDelayMillis / 1000} Sekunden.")
-
-                            // Erneuter Versuch nach Verzögerung
-                            Handler(Looper.getMainLooper()).postDelayed({
-                                mRobot?.goTo(location)
-                            }, retryDelayMillis)
-                        } else {
-                            Log.e(TAG, "Navigation zu $location fehlgeschlagen nach $maxRetries Versuchen. Fortsetzung der Tour.")
-                            retryCount = 0
-                            currentIndex++
-                            if (currentIndex < route.size) {
-                                navigateToNextLocation()
-                            } else {
-                                Log.i(TAG, "Tour abgeschlossen.")
-                                mRobot?.removeOnGoToLocationStatusChangedListener(this)
-                            }
-                        }
-                    }
-                    else -> {
-                        // Behandlung anderer Status wie START, CALCULATING, GOING, REPOSING
-                        Log.d(TAG, "Nicht behandelter Status: $status bei $location")
-                    }
-                }
-            }
-        }
-
-        // Füge den Listener zum Roboter hinzu
-        mRobot?.addOnGoToLocationStatusChangedListener(listener)
-
-        // Starte die Tour zur ersten Location und sage das an
-        if (route.isNotEmpty()) {
-            navigateToNextLocation()
-        } else {
-            Log.w(TAG, "Die Route ist leer, Tour kann nicht gestartet werden.")
-        }
-    }
-
-    // Navigiert zur nächsten Location in der Route
-    private fun navigateToNextLocation() {
-        val nextLocation = route[currentIndex]
-        Log.i(TAG, "Navigiere zu: $nextLocation")
-
-        try {
-            speakText("Ich navigiere jetzt zu $nextLocation.")
-        } catch (e: Exception) {
-            Log.e(TAG, "Fehler bei speakText (nächster Standort): ${e.localizedMessage}")
-        }
-
-        mRobot?.goTo(nextLocation)
     }
 
     override fun onDestroy() {
@@ -243,45 +153,6 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
             showMapData()
         }
     }
-
-
-    /**
-     * Speaks a text using the tmi tts
-     * @param text                          [String] text to speak
-     * @param isShowOnConversationLayer     [Boolean] true (default) to show conversation layer while speaking, false to hide it.
-     */
-    private fun speakText(text: String, isShowOnConversationLayer: Boolean = true){
-        mRobot?.let { robot ->
-            val ttsRequest: TtsRequest = TtsRequest.create(speech = text, isShowOnConversationLayer = isShowOnConversationLayer)
-            robot.speak(ttsRequest)
-        }
-    }
-
-    private fun getMapName() : String{
-        val mapName = mRobot?.getMapData()!!.mapName
-        return mapName
-    }
-
-    /**
-     * Uses temi tts to speak every listed location on the active map
-     */
-    private fun speakLocations(){
-        mRobot?.let { robot ->
-            var text = "Das sind alle Orte an die ich gehen kann:"
-            robot.locations.forEach {
-                text += " $it,"
-            }
-            speakText(text, isShowOnConversationLayer = false)
-        }
-    }
-
-    /**
-     * Uses temi sdk function to go to home base
-     */
-    private fun gotoHomeBase(){
-        mRobot?.goTo(location = "home base")
-    }
-
 
     /**
      * Gets the [MapDataModel] of the robot and shows its data in Logcat

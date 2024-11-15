@@ -1,10 +1,13 @@
 package de.fhkiel.temi.robogguide
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
 import android.util.Log
 import android.view.View
@@ -22,12 +25,10 @@ import org.json.JSONObject
 import de.fhkiel.temi.robogguide.database.DatabaseHelper
 
 class IndividualGuideActivity : AppCompatActivity() {
+    private var tourService: TourService? = null
+    private var isBound = false
     private val selectedItems = mutableListOf<String>()
-    private lateinit var tourHelper: TourHelper
     private lateinit var database: DatabaseHelper
-    private var mRobot: Robot? = null
-    private var route: List<String> = listOf()
-    private var currentIndex = 0
     private val TAG = "IndividualGuideActivity-Tour"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,7 +39,6 @@ class IndividualGuideActivity : AppCompatActivity() {
         // Initialisiere die Datenbank und den TourHelper
         database = DatabaseHelper.getInstance(this, "roboguide.db")
         database.initializeDatabase()
-        tourHelper = TourHelper(database,this)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.individual_guide_view)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -90,9 +90,9 @@ class IndividualGuideActivity : AppCompatActivity() {
         // Starte die individuelle Tour
         findViewById<Button>(R.id.btnStart).setOnClickListener {
             if (selectedItems.isNotEmpty()) {
-                tourHelper.setIndividualRoute(selectedItems)
-                if (tourHelper.route.isNotEmpty()) {
-                    tourHelper.startTour()
+                tourService!!.setIndividualRoute(selectedItems)
+                if (tourService!!.isRouteEmpty()) {
+                    tourService!!.startTour("individual")
                     val intent = Intent(this, ExecutionActivity::class.java)
                     startActivity(intent)
                 } else {
@@ -106,6 +106,35 @@ class IndividualGuideActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnBack).setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
+        }
+    }
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            val binder = service as TourService.TourBinder
+            tourService = binder.getService()
+            isBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            isBound = false
+            tourService = null
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Intent(this, TourService::class.java).also { intent ->
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+
+    override fun onStop() {
+        super.onStop()
+        if (isBound) {
+            unbindService(connection)
+            isBound = false
         }
     }
 
