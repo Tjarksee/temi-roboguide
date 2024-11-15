@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import androidx.core.content.ContextCompat.startActivity
 import com.robotemi.sdk.Robot
 import com.robotemi.sdk.TtsRequest
 import com.robotemi.sdk.listeners.OnGoToLocationStatusChangedListener
@@ -189,7 +188,16 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         currentIndex++
         val nextLocation = route[currentIndex]
         val text = database.getTransferText(nextLocation)
-        //to do hier text anzeigen
+        if(text!=null){
+            val itemMedia = database.getTableDataAsJsonWithQuery("media", "SELECT * FROM media WHERE id = '${text["id"]}'")
+            val intent = Intent(context, ExecutionActivity::class.java).apply {
+                putExtra("EXTRA_URL", text["text"].toString())
+                putExtra("EXTRA_TEXT", itemMedia["url"].toString())
+            }
+            context.startActivity(intent)
+        }else{
+            speakText("hierfür habe ich leider keinen text")
+        }
 
         if(text?.get("text") != null){
             isSpeechCompleted = false
@@ -210,7 +218,6 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         }
     }
 
-    // Versucht, die Navigation bei einem Abbruch neu zu starten
     private fun retryNavigation(location: String, listener: OnGoToLocationStatusChangedListener) {
 
         val maxRetries = 3
