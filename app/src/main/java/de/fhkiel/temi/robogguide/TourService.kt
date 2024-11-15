@@ -11,7 +11,6 @@ class TourService : Service() {
 
     private val binder = TourBinder()
     private lateinit var tourHelper: TourHelper
-    private lateinit var databaseHelper: DatabaseHelper
 
     inner class TourBinder : Binder() {
         fun getService(): TourService = this@TourService
@@ -19,8 +18,7 @@ class TourService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        databaseHelper = DatabaseHelper(this,"roboguide.db")
-        tourHelper = TourHelper(databaseHelper, this)
+        tourHelper = TourHelper(this)
         Log.d("TourService", "TourService erstellt und TourHelper initialisiert")
     }
 
@@ -32,6 +30,7 @@ class TourService : Service() {
         when (routeType) {
             "long" -> tourHelper.startLongTour()
             "short" -> tourHelper.startShortTour()
+            "individual" -> tourHelper.startTour()
             else -> Log.e("TourService", "Unbekannter Routentyp: $routeType")
         }
     }

@@ -12,7 +12,8 @@ import de.fhkiel.temi.robogguide.database.DatabaseHelper
 import org.json.JSONObject
 
 
-class TourHelper(private val database: DatabaseHelper,private val context: Context):Robot.TtsListener {
+class TourHelper(private val context: Context):Robot.TtsListener {
+    private var database : DatabaseHelper
     private var mRobot: Robot? = null
     private var retryCount = 0
     var route: MutableList<Location> = mutableListOf()
@@ -29,6 +30,8 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
 
     init {
         mRobot = Robot.getInstance()
+        database = DatabaseHelper.getInstance(context, "roboguide.db")
+        database.initializeDatabase()
     }
 
     fun setIndividualRoute(selectedLocationIds: List<String>) {
@@ -56,8 +59,6 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         startTour()
     }
 
-
-
     fun startShortTour() {
         val listOfLocations = database.getImportantLocations()
         for (location in listOfLocations) {
@@ -75,6 +76,9 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         currentIndex = 0
         Log.i(TAG, "Individuelle Tour gestartet.")
         setLocationListener()
+        mRobot?.addTtsListener(this)
+        isSpeechCompleted = true
+        isNavigationCompleted = false
         goToFirstLocation()
     }
 
@@ -139,7 +143,6 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
     }
 
     private fun activityForLocation() {
-        // Überprüfen, ob currentIndex den Bereich der route-Liste überschreitet
         if (currentIndex >= route.size) {
             Log.w(TAG, "currentIndex $currentIndex ist außerhalb des Bereichs der Route-Liste (${route.size} Elemente). Beende die Tour.")
             endTour()
@@ -152,16 +155,16 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         if (locationIndex >= items.size) {
             Log.w(TAG, "locationIndex $locationIndex ist außerhalb des Bereichs der Item-Liste (${items.size} Elemente). Wechsle zur nächsten Location.")
             atLocation = false
-            locationIndex = 0 // Setze den Index für die nächste Location zurück
+            locationIndex = 0
             navigateToNextLocation()
             return
         }
 
         val itemText = database.getItemTexts(items[locationIndex]?.get("id").toString())
-        locationIndex++ // Erhöht locationIndex für das nächste Item
+        locationIndex++
 
         if (itemText != null) {
-            val mediaUrl = database.getMedia(itemText["id"].toString()) // Verwende die neue getMedia-Methode
+            val mediaUrl = database.getMedia(itemText["id"].toString())
 
             if (mediaUrl != null) {
                 Log.i(TAG, "Medien-URL gefunden für Text ${itemText["id"]}: $mediaUrl")
@@ -175,22 +178,11 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
             speakText(itemText["text"].toString())
         } else {
             Log.w(TAG, "Kein Text gefunden für Item bei Location ${route[currentIndex].locationId}")
-            speakText("Hierfür habe ich leider keinen Text.")
+            speakWithoutListener("Hierfür habe ich leider keinen Text.")
         }
     }
 
 
-
-
-    private fun executeTour(){
-        setLocationListener()
-        isSpeechCompleted = true
-        isNavigationCompleted = false
-        goToFirstLocation()
-
-    }
-
-    // Gehe zur ersten Location in der Route
     private fun goToFirstLocation() {
         if (route.isNotEmpty()) {
             mRobot?.goTo(route[0].name.toString())
@@ -199,7 +191,6 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         }
     }
 
-    // Listener für den Status der Standortänderung
     private fun setLocationListener() {
         locationStatusListener = object : OnGoToLocationStatusChangedListener {
             override fun onGoToLocationStatusChanged(location: String, status: String, descriptionId: Int, description: String) {
@@ -209,7 +200,8 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
                     "complete" -> {
                         retryCount = 0
                         Log.i(TAG, "Standort erreicht: $location")
-                        handleLocationArrival()
+                        isNavigationCompleted = true
+                        checkMovementAndSpeechStatus()
                     }
                     "abort" -> retryNavigation(location)
                     else -> Log.d(TAG, "Nicht behandelter Status: $status bei $location")
@@ -232,25 +224,24 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
             val intent = Intent("ACTION_UPDATE_PROGRESS")
             intent.putExtra("EXTRA_PROGRESS", progress)
             context.sendBroadcast(intent)
-
             Log.i(TAG, "Navigiere zur nächsten Location: ${nextLocation.name}")
             isNavigationCompleted = false
+            isSpeechCompleted = false
+            speakWithoutListener("navigiere zu ${nextLocation.name}")
             mRobot?.goTo(nextLocation.name.toString())
         } else {
-            // Beende die Tour, wenn das Ende der Route erreicht ist
             endTour()
         }
     }
 
 
     private fun checkMovementAndSpeechStatus() {
-        if (isSpeechCompleted && isNavigationCompleted) {
+        if (isSpeechCompleted && isNavigationCompleted && !atLocation) {
             atLocation = true
             activityForLocation()
         }
     }
 
-    // Versucht, die Navigation bei einem Abbruch neu zu starten
     private fun retryNavigation(location: String) {
         if (retryCount < maxRetries) {
             retryCount++
@@ -263,11 +254,11 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         }
     }
 
-    // Sprechen eines Textes über TTS und Senden des Textes an die ExecutionActivity
     private fun speakText(text: String, isShowOnConversationLayer: Boolean = false) {
         mRobot?.let {
             val ttsRequest = TtsRequest.create(speech = text, isShowOnConversationLayer = false)
             onTtsStatusChanged(ttsRequest)
+
             it.speak(ttsRequest)
             val intent = Intent("ACTION_UPDATE_SPOKEN_TEXT").apply {
                 putExtra("EXTRA_SPOKEN_TEXT", text)
@@ -276,26 +267,34 @@ class TourHelper(private val database: DatabaseHelper,private val context: Conte
         }
     }
 
-    // TTS-Callback-Handling
+    private fun speakWithoutListener(text: String) {
+        mRobot?.removeTtsListener(this)
+
+        val ttsRequest = TtsRequest.create(speech = text, isShowOnConversationLayer = false)
+        mRobot?.speak(ttsRequest)
+
+        mRobot?.addTtsListener(this)
+    }
+
     override fun onTtsStatusChanged(ttsRequest: TtsRequest) {
         if (ttsRequest.status == TtsRequest.Status.COMPLETED) {
             Log.i(TAG, "Sprachausgabe abgeschlossen.")
-            isSpeechCompleted = true
-            checkMovementAndSpeechStatus()
+            if(atLocation){
+                activityForLocation()
+            }else{
+                isSpeechCompleted = true
+                checkMovementAndSpeechStatus()
+            }
+
         }
+        mRobot?.addTtsListener(this)
+
     }
 
-    // Abschluss der Tour und Entfernen des Listeners
     private fun endTour() {
         Log.i(TAG, "Tour abgeschlossen.")
-        speakText("Die Tour ist jetzt abgeschlossen.")
+        speakWithoutListener("Die Tour ist jetzt abgeschlossen.")
         locationStatusListener?.let { mRobot?.removeOnGoToLocationStatusChangedListener(it) }
-    }
-
-    // Aktionen bei Ankunft an einem Standort
-    private fun handleLocationArrival() {
-        activityForLocation()
-        navigateToNextLocation()
     }
 
 }
