@@ -45,6 +45,7 @@ class IndividualGuideActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+        val selectedItemAmountTextView = findViewById<TextView>(R.id.selectedItemAmount)
 
         // Hole die Location-Daten und baue die UI
         val locationsMap = intent.getSerializableExtra(EXTRA_LOCATIONS) as? HashMap<String, String>
@@ -70,6 +71,7 @@ class IndividualGuideActivity : AppCompatActivity() {
                         setBackgroundColor(Color.GREEN)
                     }
                 }
+                updateSelectedItemCount(selectedItemAmountTextView)
             }
 
             val textView = TextView(this).apply {
@@ -86,6 +88,7 @@ class IndividualGuideActivity : AppCompatActivity() {
             }
             container.addView(divider)
         }
+
 
         // Starte die individuelle Tour
         findViewById<Button>(R.id.btnStart).setOnClickListener {
@@ -107,6 +110,10 @@ class IndividualGuideActivity : AppCompatActivity() {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
         }
+    }
+    private fun updateSelectedItemCount(textView: TextView) {
+        val count = selectedItems.size
+        "Du hast aktuell $count Location${if (count == 1) "" else "s"} ausgewählt".also { textView.text = it }
     }
 
     private val connection = object : ServiceConnection {

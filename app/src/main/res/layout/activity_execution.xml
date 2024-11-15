@@ -49,11 +49,14 @@
         <TextView
             android:id="@+id/tvDescription"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="450dp"
             android:layout_weight="1"
-            android:text="@string/beschreibung_des_aktuellen_bereichs"
-            android:textSize="18sp"
-            android:padding="8dp" />
+            android:autoSizeMaxTextSize="30sp"
+            android:autoSizeMinTextSize="12sp"
+            android:autoSizeStepGranularity="2sp"
+            android:autoSizeTextType="uniform"
+            android:padding="8dp"
+            android:text="@string/beschreibung_des_aktuellen_bereichs" />
 
         <ImageView
             android:id="@+id/ivAreaImage"

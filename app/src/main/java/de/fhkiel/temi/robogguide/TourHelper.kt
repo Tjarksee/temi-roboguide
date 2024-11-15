@@ -287,14 +287,14 @@ class TourHelper(private val context: Context):Robot.TtsListener {
             }
 
         }
-        mRobot?.addTtsListener(this)
-
     }
 
     private fun endTour() {
         Log.i(TAG, "Tour abgeschlossen.")
         speakWithoutListener("Die Tour ist jetzt abgeschlossen.")
+        mRobot?.removeTtsListener(this)
         locationStatusListener?.let { mRobot?.removeOnGoToLocationStatusChangedListener(it) }
+
     }
 
 }

@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
-import de.fhkiel.temi.robogguide.database.DatabaseHelper
 
 class TourService : Service() {
 
