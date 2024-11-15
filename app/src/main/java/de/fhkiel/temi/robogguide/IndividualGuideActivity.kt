@@ -16,6 +16,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.robotemi.sdk.Robot
@@ -52,6 +53,7 @@ class IndividualGuideActivity : AppCompatActivity() {
         val locations = locationsMap?.mapValues { JSONObject(it.value) } ?: emptyMap()
 
         val container = findViewById<LinearLayout>(R.id.containerLayout)
+        val startButton = findViewById<Button>(R.id.btnStart)
         locations.forEach { (key, jsonObject) ->
             val itemLayout = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -70,8 +72,9 @@ class IndividualGuideActivity : AppCompatActivity() {
                         selectedItems.add(key)
                         setBackgroundColor(Color.GREEN)
                     }
+                    updateSelectedItemCount(selectedItemAmountTextView,startButton)
                 }
-                updateSelectedItemCount(selectedItemAmountTextView)
+
             }
 
             val textView = TextView(this).apply {
@@ -90,7 +93,7 @@ class IndividualGuideActivity : AppCompatActivity() {
         }
 
 
-        // Starte die individuelle Tour
+
         findViewById<Button>(R.id.btnStart).setOnClickListener {
             if (selectedItems.isNotEmpty()) {
                 tourService!!.setIndividualRoute(selectedItems)
@@ -111,9 +114,16 @@ class IndividualGuideActivity : AppCompatActivity() {
             startActivity(intent)
         }
     }
-    private fun updateSelectedItemCount(textView: TextView) {
+    private fun updateSelectedItemCount(textView: TextView, startButton: Button) {
         val count = selectedItems.size
-        "Du hast aktuell $count Location${if (count == 1) "" else "s"} ausgewählt".also { textView.text = it }
+        "Du hast aktuell $count Location${if (count == 1 || count == 0) "" else "s"} ausgewählt".also { textView.text = it }
+        if(count>0){
+            startButton.setBackgroundColor(ContextCompat.getColor(this, R.color.continueButton))
+            startButton.isClickable = true
+        }else{
+            startButton.setBackgroundColor(ContextCompat.getColor(this, R.color.radio_button_unchecked))
+            startButton.isClickable = false
+        }
     }
 
     private val connection = object : ServiceConnection {

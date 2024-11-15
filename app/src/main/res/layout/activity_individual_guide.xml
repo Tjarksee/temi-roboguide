@@ -2,17 +2,17 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/individual_guide_view"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".IndividualGuideActivity"
-    android:padding="16dp">
+    >
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
+        android:paddingTop="30dp"
         android:gravity="center_horizontal">
 
 
@@ -56,7 +56,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
-                    android:text="du hast 0 locations ausgewählt"
+                    android:textSize="30sp"
+                    android:text="Du hast 0 locations ausgewählt"
                     android:gravity="center"/>
 
                 <RadioGroup
@@ -74,6 +75,7 @@
                         android:button="@android:color/transparent"
                         android:gravity="center"
                         android:layout_weight="1"
+                        android:textSize="30sp"
                         android:text="Kurze Beschreibung" />
 
                     <RadioButton
@@ -82,8 +84,10 @@
                         android:layout_height="match_parent"
                         android:background="@drawable/radio_selector"
                         android:gravity="center"
+                        android:checked="true"
                         android:button="@android:color/transparent"
                         android:layout_weight="1"
+                        android:textSize="30sp"
                         android:text="Ausführliche Beschreibung" />
                 </RadioGroup>
 
@@ -92,9 +96,11 @@
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
-                    android:backgroundTint="@android:color/holo_green_dark"
+                    android:background="@color/radio_button_unchecked"
+                    android:clickable="false"
                     android:paddingStart="32dp"
                     android:paddingEnd="32dp"
+                    android:textSize="30sp"
                     android:text="@string/start"
                     android:textColor="@android:color/white" />
 
@@ -106,6 +112,7 @@
                     android:layout_marginEnd="8dp"
                     android:backgroundTint="@android:color/holo_blue_dark"
                     android:paddingStart="32dp"
+                    android:textSize="30sp"
                     android:paddingEnd="32dp"
                     android:text="@string/zur_ck"
                     android:textColor="@android:color/white" />

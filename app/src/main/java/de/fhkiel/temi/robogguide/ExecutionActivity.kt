@@ -1,12 +1,15 @@
 package de.fhkiel.temi.robogguide
 
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.ServiceConnection
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.util.Log
 import android.widget.Button
 import android.widget.ImageView
@@ -15,6 +18,7 @@ import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.robotemi.sdk.Robot
@@ -25,11 +29,38 @@ class ExecutionActivity : AppCompatActivity() {
     private lateinit var tvDescription: TextView
     private lateinit var ivAreaImage: ImageView
     private lateinit var progressBar: ProgressBar
+    private lateinit var tvHeading: TextView
+    private var mRobot: Robot? = null
+    private var isRunning = true
+    private var isBound = false
+    private var tourService: TourService? = null
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            val tourBinder = binder as TourService.TourBinder
+            tourService = tourBinder.getService()
+            isBound = true
+            Log.d("ExecutionActivity", "TourService verbunden")
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            tourService = null
+            isBound = false
+            Log.d("ExecutionActivity", "TourService getrennt")
+        }
+    }
 
     private val textReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val spokenText = intent?.getStringExtra("EXTRA_SPOKEN_TEXT")
             tvDescription.text = spokenText
+        }
+    }
+
+    private val headingReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val heading = intent?.getStringExtra("EXTRA_HEADING")
+            tvHeading.text = heading
         }
     }
 
@@ -54,14 +85,20 @@ class ExecutionActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val serviceIntent = Intent(this, TourService::class.java)
+        bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
         setContentView(R.layout.activity_execution)
+        tvHeading = findViewById(R.id.tvCurrentArea)
         tvDescription = findViewById(R.id.tvDescription)
         ivAreaImage = findViewById(R.id.ivAreaImage)
         progressBar = findViewById(R.id.progressBar)
+        mRobot = Robot.getInstance()
 
 
 
         // Registriere den BroadcastReceiver
+        registerReceiver(headingReceiver, IntentFilter("ACTION_UPDATE_HEADING"),
+            RECEIVER_NOT_EXPORTED)
         registerReceiver(textReceiver, IntentFilter("ACTION_UPDATE_SPOKEN_TEXT"),
             RECEIVER_NOT_EXPORTED)
         registerReceiver(mediaReceiver, IntentFilter("ACTION_UPDATE_MEDIA"),
@@ -77,8 +114,20 @@ class ExecutionActivity : AppCompatActivity() {
             insets
         }
 
-        findViewById<Button>(R.id.btnPause).setOnClickListener {
-            //to Do
+        val btnPauseContinue: Button = findViewById(R.id.btnPauseContinue)
+        fun updateButtonState() {
+            if (isRunning) {
+                btnPauseContinue.text = "Pause"
+                btnPauseContinue.setBackgroundColor(ContextCompat.getColor(this, R.color.pauseButton))  // Button auf Orange setzen
+            } else {
+                btnPauseContinue.text = "Weiter"
+                btnPauseContinue.setBackgroundColor(ContextCompat.getColor(this, R.color.continueButton))  // Button auf Grün setzen
+            }
+        }
+
+        findViewById<Button>(R.id.btnPauseContinue).setOnClickListener {
+            isRunning = !isRunning
+            updateButtonState()
         }
 
         findViewById<Button>(R.id.btnSkip).setOnClickListener {
@@ -86,9 +135,7 @@ class ExecutionActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btnExit).setOnClickListener {
-            val intent = Intent(this, RatingActivity::class.java)
-            startActivity(intent)
-            Robot.getInstance().goTo("home base")
+            tourService!!.endTour()
         }
     }
     private fun loadImageFromUrl(url: String) {
@@ -110,6 +157,7 @@ class ExecutionActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         // Unregister the receiver to avoid memory leaks
+        unregisterReceiver(headingReceiver)
         unregisterReceiver(textReceiver)
         unregisterReceiver(mediaReceiver)
         unregisterReceiver(progressReceiver)

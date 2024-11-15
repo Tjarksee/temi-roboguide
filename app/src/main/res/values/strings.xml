@@ -6,9 +6,10 @@
     <string name="btnCancelSpeak" translatable="false">Cancel Speak</string>
     <string name="btnGotoHomeBase" translatable="false">Goto Home Base</string>
     <string name="btnExit" translatable="false">Exit App</string>
-    <string name="Continue">Weiter</string>
-    <string name="secondHeading">Wie hat es ihenen gefallen?</string>
-    <string name="Heading">Ende der Fuehrung</string>
+    <string name="btnRating">Bewertung abgeben</string>
+    <string name="btnSkipRating">Bewertung überspringen</string>
+    <string name="secondHeading">Wie hat dir die Führung gefallen?</string>
+    <string name="Heading">Ende der Führung</string>
     <string name="textImportantExplanation" translatable="false">Nur wichtiege Informationen</string>
     <string name="textLongExplanation">Ausführliche Informationen</string>
     <string name="start_der_tour">Start der Tour</string>
@@ -31,7 +32,7 @@
     <string name="start">Start</string>
     <string name="zur_ck">Zurück</string>
     <string name="exit">Exit</string>
-    <string name="skip">Skip</string>
+    <string name="skip">Überspringen</string>
     <string name="pause">Pause</string>
     <string name="beschreibung_des_aktuellen_bereichs">Beschreibung des aktuellen Bereichs</string>
     <string name="aktueller_bereich_bereich_1">Aktueller Bereich: Bereich 1</string>
@@ -39,4 +40,5 @@
     <string name="nur_wichtige_bereiche">nur wichtige Bereiche</string>
     <string name="art_der_tour">Art der Tour</string>
     <string name="listHeading">Liste der Austellungsstücke</string>
+    <string name="pauseContinue">Pause</string>
 </resources>

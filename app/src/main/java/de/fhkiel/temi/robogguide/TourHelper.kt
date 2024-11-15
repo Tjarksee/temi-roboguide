@@ -163,14 +163,31 @@ class TourHelper(private val context: Context):Robot.TtsListener {
         val itemText = database.getItemTexts(items[locationIndex]?.get("id").toString())
         locationIndex++
 
+
+
+        if(itemText!=null){
+            val mainText = itemText["text"].toString()
+            val headingText = itemText["title"].toString()
+            val text = Intent("ACTION_UPDATE_SPOKEN_TEXT").apply {
+                putExtra("EXTRA_SPOKEN_TEXT", mainText)
+            }
+            val heading = Intent("ACTION_UPDATE_HEADING").apply {
+            putExtra("EXTRA_HEADING",headingText)
+            }
+            context.sendBroadcast(text)
+            context.sendBroadcast(heading)
+        }
+
+
+
         if (itemText != null) {
             val mediaUrl = database.getMedia(itemText["id"].toString())
 
             if (mediaUrl != null) {
                 Log.i(TAG, "Medien-URL gefunden für Text ${itemText["id"]}: $mediaUrl")
-                val intent = Intent("ACTION_UPDATE_MEDIA")
-                intent.putExtra("EXTRA_MEDIA_URL", mediaUrl)
-                context.sendBroadcast(intent)
+                val media = Intent("ACTION_UPDATE_MEDIA")
+                media.putExtra("EXTRA_MEDIA_URL", mediaUrl)
+                context.sendBroadcast(media)
             } else {
                 Log.w(TAG, "Keine Medien-URL gefunden für Text ${itemText["id"]}")
             }
@@ -218,8 +235,23 @@ class TourHelper(private val context: Context):Robot.TtsListener {
 
         if (currentIndex < route.size) {
             val nextLocation = route[currentIndex]
+            val transferText = database.getTransferText(route[currentIndex])
+            if(transferText != null){
+                val mediaUrl = database.getMedia(transferText["id"].toString())
+                val heading = Intent("ACTION_UPDATE_SPOKEN_TEXT").apply {
+                    putExtra("EXTRA_SPOKEN_TEXT", transferText["text"].toString())
+                }
+                val text = Intent("ACTION_UPDATE_HEADING").apply {
+                    putExtra("EXTRA_HEADING",nextLocation.name )
+                }
+                val media = Intent("ACTION_UPDATE_MEDIA")
+                media.putExtra("EXTRA_MEDIA_URL", mediaUrl)
 
-            // Aktualisiere den Fortschritt für die ProgressBar und sende ihn als Broadcast
+                context.sendBroadcast(text)
+                context.sendBroadcast(heading)
+                context.sendBroadcast(media)
+
+            }
             val progress = ((currentIndex + 1) * 100) / totalLocations
             val intent = Intent("ACTION_UPDATE_PROGRESS")
             intent.putExtra("EXTRA_PROGRESS", progress)
@@ -228,6 +260,7 @@ class TourHelper(private val context: Context):Robot.TtsListener {
             isNavigationCompleted = false
             isSpeechCompleted = false
             speakWithoutListener("navigiere zu ${nextLocation.name}")
+
             mRobot?.goTo(nextLocation.name.toString())
         } else {
             endTour()
@@ -257,13 +290,7 @@ class TourHelper(private val context: Context):Robot.TtsListener {
     private fun speakText(text: String, isShowOnConversationLayer: Boolean = false) {
         mRobot?.let {
             val ttsRequest = TtsRequest.create(speech = text, isShowOnConversationLayer = false)
-            onTtsStatusChanged(ttsRequest)
-
             it.speak(ttsRequest)
-            val intent = Intent("ACTION_UPDATE_SPOKEN_TEXT").apply {
-                putExtra("EXTRA_SPOKEN_TEXT", text)
-            }
-            context.sendBroadcast(intent)
         }
     }
 
@@ -289,12 +316,25 @@ class TourHelper(private val context: Context):Robot.TtsListener {
         }
     }
 
-    private fun endTour() {
-        Log.i(TAG, "Tour abgeschlossen.")
-        speakWithoutListener("Die Tour ist jetzt abgeschlossen.")
-        mRobot?.removeTtsListener(this)
-        locationStatusListener?.let { mRobot?.removeOnGoToLocationStatusChangedListener(it) }
+    fun resetTour(){
+        route.clear()
+        locationIndex = 0
+        currentIndex = 0
+        locationStatusListener?.let { mRobot?.removeOnGoToLocationStatusChangedListener(it)}
+        atLocation = false
+        mRobot?.goTo("home base")
+    }
 
+    fun endTour() {
+        Log.i(TAG, "Tour abgeschlossen.")
+        mRobot?.removeTtsListener(this)
+        locationStatusListener?.let { mRobot?.removeOnGoToLocationStatusChangedListener(it)}
+        mRobot?.stopMovement()
+        mRobot?.cancelAllTtsRequests()
+        speakText("Die Tour ist jetzt abgeschlossen. Wenn du möchtest kannst du dir kurz die Zeit nehmen die Tour zu bewerten")
+        val intent = Intent(context, RatingActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
     }
 
 }

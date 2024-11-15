@@ -76,10 +76,11 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="16dp"
         app:layout_constraintBottom_toTopOf="@+id/buttonContainer"
-        android:layout_marginBottom="16dp" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <LinearLayout
         android:id="@+id/buttonContainer"
@@ -92,43 +93,37 @@
         android:layout_marginBottom="24dp">
 
         <Button
-            android:id="@+id/btnPause"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/pause"
+            android:id="@+id/btnPauseContinue"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center"
+            android:textSize="16sp"
+            android:padding="20dp"
+            android:text="@string/pauseContinue"
             android:textColor="@android:color/white"
-            android:backgroundTint="@android:color/holo_orange_dark"
-            android:paddingStart="32dp"
-            android:paddingEnd="32dp"
-            android:layout_gravity="start" />
-
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
+            android:backgroundTint="@color/pauseButton" />
 
         <Button
             android:id="@+id/btnSkip"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="120dp"
+            android:layout_gravity="center"
+            android:textSize="16sp"
+            android:padding="20dp"
             android:text="@string/skip"
             android:textColor="@android:color/white"
-            android:backgroundTint="@android:color/holo_blue_dark"
-            android:layout_marginEnd="8dp"
-            android:paddingStart="32dp"
-            android:paddingEnd="32dp"
-            android:layout_gravity="end" />
+            android:backgroundTint="@android:color/holo_blue_dark" />
 
         <Button
             android:id="@+id/btnExit"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center"
+            android:textSize="16sp"
+            android:padding="20dp"
             android:text="@string/exit"
             android:textColor="@android:color/white"
-            android:backgroundTint="@android:color/holo_red_dark"
-            android:paddingStart="32dp"
-            android:paddingEnd="32dp"
-            android:layout_gravity="end" />
+            android:backgroundTint="@android:color/holo_red_dark" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

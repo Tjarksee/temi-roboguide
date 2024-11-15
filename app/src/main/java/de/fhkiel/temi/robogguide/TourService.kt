@@ -42,6 +42,13 @@ class TourService : Service() {
         return tourHelper.route.isNotEmpty()
     }
 
+    fun endTour(){
+        tourHelper.endTour()
+    }
+
+    fun reset(){
+        tourHelper.resetTour()
+    }
     fun pauseTour() {
 
         Log.d("TourService", "Tour pausiert")

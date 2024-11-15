@@ -9,4 +9,6 @@
     <color name="radio_button_checked">#FFBB86FC</color>
     <color name="radio_button_unchecked">#E0E0E0</color>
     <color name="selectedColor">#36df56</color>
+    <color name="pauseButton">#FF9E2B</color>
+    <color name="continueButton">#9411FF43</color>
 </resources>
