@@ -11,6 +11,7 @@ import org.json.JSONObject
 
 
 class TourHelper(private val context: Context):Robot.TtsListener {
+    private lateinit var startPosition : Location
     private var database : DatabaseHelper
     private var mRobot: Robot? = null
     private var retryCount = 0
@@ -134,6 +135,7 @@ class TourHelper(private val context: Context):Robot.TtsListener {
             else {
                 Log.e("TourHelper", "Es wurde kein Startpunkt gefunden.")
                 val startingPoint = Location(null,null,null)
+                startPosition = startingPoint
                 return startingPoint
             }
 
@@ -338,7 +340,7 @@ class TourHelper(private val context: Context):Robot.TtsListener {
         currentIndex = 0
         removeLocationListener()
         atLocation = false
-        mRobot?.goTo("home base")
+        mRobot?.goTo(startPosition.name.toString())
     }
 
     fun endTour() {
