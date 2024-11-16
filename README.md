@@ -29,6 +29,7 @@ Hier wird eine Liste mit allen Locations des Place angezeigt die ausgewählten L
 
 ### ExcecutionActivity
 Durch ein BroadcastListener werden der Text,das Bild/Video der Titel und der Progress der Tour empfangen und dargestellt
+Falls neue Informationen geschickt werden werden die alten überschreiben und somit bleibt diese View für den ganzen Teil der Tour offen 
 
 ### Raiting Activity
 Es können 0-5 Sterne für die Tour gegeben werden die Bewertung wird mit dem Format YYYY-MM-DD an der Location  /storage/emulated/0/Android/data/de.fhkiel.temi.robogguide/files/Documents/
@@ -46,7 +47,7 @@ Er dient dazu dass wir einen einhaltlichen zugriff auf den TourHelper haben
 
 TourHelper
 Im TourHelper wird die Tour geplant und ausgeführt heir befidnen sich auch die Movent und Tts Listener
-Er ordent außerdem die Tour in die richtiege Reihenfolge und dient generell als Logic des Programms
+Er ordent außerdem die Tour in die richtiege Reihenfolge findet den Anfang der Tour heraus und dient generell als Logic des Programms
 In der Route werden eine geordnete liste der anzufahrenden Locations gespeichert die Location werden mit der Location-ID dem Namen und der dazugehöriegen Transfer-ID gespeichert
 Der TourHelper kümmert sich auch ums Error handeling hier wird falls ein error code beim MovmentListener recieved wird ein Error PopUp gestartet
 
