@@ -414,7 +414,6 @@ class TourHelper(private val context: Context):Robot.TtsListener {
         }
         val dialog = builder.create()
         dialog.show()
-
     }
 
 }
