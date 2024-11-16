@@ -21,7 +21,8 @@
                 android:id="@+id/btnBackToSelection"
                 android:layout_width="174dp"
                 android:layout_height="137dp"
-
+                android:background="@color/button_background"
+                android:textColor="@color/white"
                 android:text="Ort ändern" />
 
             <TextView
@@ -155,12 +156,15 @@
                 android:id="@+id/btnList"
                 android:layout_width="640dp"
                 android:layout_height="170sp"
+                android:background="@color/button_background"
+                android:textColor="@color/white"
                 android:text="@string/list_of_exhibits" />
 
             <Button
                 android:id="@+id/btnStartTour"
                 android:layout_width="640dp"
                 android:layout_height="170sp"
+                android:background="@color/continueButton"
                 android:text="@string/start_der_tour" />
         </LinearLayout>
 
