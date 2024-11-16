@@ -2,8 +2,6 @@ package de.fhkiel.temi.robogguide
 
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import com.robotemi.sdk.Robot
 import com.robotemi.sdk.TtsRequest
@@ -24,8 +22,6 @@ class TourHelper(private val context: Context):Robot.TtsListener {
     private var currentIndex = 0
     private var totalLocations = 0
     private val TAG = "TourHelper-Tour"
-    private val maxRetries = 3
-    private val retryDelayMillis = 5000L
     private var locationStatusListenerManager: OnGoToLocationStatusChangedListener? = null
     private var paused = false
 

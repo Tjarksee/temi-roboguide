@@ -2,26 +2,28 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:gravity="center_horizontal"
     android:padding="16dp">
 
     <TextView
         android:id="@+id/tvSelectPlace"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Wähle einen Ort:"
-        android:textSize="20sp"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="16dp"
+
+        android:text="An welchem Ort befinde ich mich gerade?"
+        android:textSize="20sp" />
 
     <ListView
         android:id="@+id/lvPlaces"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="520dp" />
 
     <Button
         android:id="@+id/btnConfirmPlace"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Bestätigen"
+        android:layout_height="189dp"
+        android:layout_marginTop="16dp"
         android:enabled="false"
-        android:layout_marginTop="16dp" />
+        android:text="Bestätigen" />
 </LinearLayout>
