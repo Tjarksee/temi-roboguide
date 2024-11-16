@@ -16,6 +16,7 @@ import android.view.View
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.view.LayoutInflater
+import android.webkit.JavascriptInterface
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
@@ -41,12 +42,12 @@ class ExecutionActivity : AppCompatActivity() {
     private var mRobot: Robot? = null
     private var isRunning = false
     private var isBound = false
-    private var tourService: TourService? = null
+    var tourService: TourService? = null
     private lateinit var wvAreaVideo: WebView
     private val TAG = "ExecutionActivity"
     private var isNavigationCompleted = false
     private var isSpeechCompleted = false
-    private var isVideoCompleted = false
+    var isVideoCompleted = false
 
 
 
@@ -206,51 +207,87 @@ class ExecutionActivity : AppCompatActivity() {
     }
 
     private fun showVideo(url: String) {
+        // Bild ausblenden, Videoansicht anzeigen
         ivAreaImage.visibility = View.GONE
         wvAreaVideo.visibility = View.VISIBLE
 
+        // WebView-Einstellungen
         wvAreaVideo.settings.javaScriptEnabled = true
         wvAreaVideo.settings.mediaPlaybackRequiresUserGesture = false
 
-        wvAreaVideo.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean = false
-            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = false
-        }
+        // JavaScript-Schnittstelle hinzufügen
+        wvAreaVideo.addJavascriptInterface(WebAppInterface(this), "AndroidInterface")
 
-        wvAreaVideo.webChromeClient = object : WebChromeClient() {
-            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                if (newProgress == 100) {
-                    Log.d(TAG, "Video geladen.")
-                }
-            }
-        }
-
+        // Prüfen, ob es sich um ein YouTube-Video handelt
         if (url.contains("youtube.com")) {
-            val videoId = url.substringAfter("v=").substringBefore("&")
-            val embeddedUrl = "https://www.youtube.com/embed/$videoId?autoplay=1&enablejsapi=1"
-            wvAreaVideo.loadUrl(embeddedUrl)
+            val videoId = extractYouTubeVideoId(url)
+            if (videoId != null) {
+                // HTML-Code für den YouTube-IFrame
+                val html = """
+                <html>
+                <body>
+                <div id="player"></div>
+                <script>
+                    var tag = document.createElement('script');
+                    tag.src = "https://www.youtube.com/iframe_api";
+                    var firstScriptTag = document.getElementsByTagName('script')[0];
+                    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+                    var player;
+                    function onYouTubeIframeAPIReady() {
+                        player = new YT.Player('player', {
+                            height: '100%',
+                            width: '100%',
+                            videoId: '$videoId',
+                             playerVars: {
+                                'autoplay': 1, 
+                                'controls': 1 
+                            },
+                            events: {
+                                'onStateChange': onPlayerStateChange
+                            }
+                        });
+                    }
+
+                    function onPlayerStateChange(event) {
+                        if (event.data == YT.PlayerState.ENDED) {
+                            AndroidInterface.onVideoEnded();
+                        }
+                    }
+                </script>
+                </body>
+                </html>
+            """.trimIndent()
+
+                // HTML in WebView laden
+                wvAreaVideo.loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "utf-8", null)
+            } else {
+                Log.e(TAG, "Ungültige YouTube-URL: $url")
+            }
         } else {
-            wvAreaVideo.loadUrl("$url?autoplay=1")
+            Log.d(TAG, "Kein YouTube-Video erkannt.")
         }
 
+        // Setze den Video-Status auf "nicht abgeschlossen"
+        isVideoCompleted = false
         tourService?.updateVideoStatus(false)
-
-        wvAreaVideo.addJavascriptInterface(object {
-            @android.webkit.JavascriptInterface
-            fun onVideoEnded() {
-                runOnUiThread {
-                    Log.d(TAG, "Video beendet.")
-                    tourService?.updateVideoStatus(true)
-                }
-            }
-        }, "Android")
-
+    }
+    private fun extractYouTubeVideoId(url: String): String? {
+        return try {
+            val videoId = url.substringAfter("v=").substringBefore("&")
+            if (videoId.isNotEmpty()) videoId else null
+        } catch (e: Exception) {
+            Log.e(TAG, "Fehler beim Extrahieren der Video-ID: ${e.message}")
+            null
+        }
     }
 
 
 
 
-    private fun checkMovementAndSpeechStatus() {
+
+
+    fun checkMovementAndSpeechStatus() {
         if (isSpeechCompleted && isNavigationCompleted) {
             Log.d(TAG, "Beides abgeschlossen. Navigiere zur nächsten Location.")
             tourService?.continueTour()
@@ -297,5 +334,16 @@ class ExecutionActivity : AppCompatActivity() {
         unregisterReceiver(mediaReceiver)
         unregisterReceiver(progressReceiver)
 
+    }
+}
+class WebAppInterface(private val context: Context) {
+    @JavascriptInterface
+    fun onVideoEnded() {
+        (context as ExecutionActivity).runOnUiThread {
+            Log.d("WebAppInterface", "Video beendet.")
+            context.isVideoCompleted = true
+            context.tourService?.updateVideoStatus(true)
+            context.checkMovementAndSpeechStatus()
+        }
     }
 }
