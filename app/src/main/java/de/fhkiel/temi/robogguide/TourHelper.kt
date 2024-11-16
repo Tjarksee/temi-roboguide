@@ -27,6 +27,8 @@ class TourHelper(private val context: Context):Robot.TtsListener {
     private val maxRetries = 3
     private val retryDelayMillis = 5000L
     private var locationStatusListener: OnGoToLocationStatusChangedListener? = null
+    private var paused = false
+
 
     init {
         mRobot = Robot.getInstance()
@@ -336,5 +338,36 @@ class TourHelper(private val context: Context):Robot.TtsListener {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }
-
+    fun pauseTour(){
+        mRobot?.removeTtsListener(this)
+        locationStatusListener?.let { mRobot?.removeOnGoToLocationStatusChangedListener(it)}
+        mRobot?.stopMovement()
+        mRobot?.cancelAllTtsRequests()
+    }
+    fun continueTour(){
+        setLocationListener()
+        mRobot?.addTtsListener(this)
+        if(atLocation){
+            locationIndex--
+            activityForLocation()
+        }else{
+            currentIndex--
+            navigateToNextLocation()
+        }
+    }
+    fun skip(){
+        mRobot?.cancelAllTtsRequests()
+        if(paused){
+            setLocationListener()
+            mRobot?.addTtsListener(this)
+            paused = false
+        }
+        if(atLocation){
+            locationIndex--
+            activityForLocation()
+        }else{
+            mRobot?.stopMovement()
+            navigateToNextLocation()
+        }
+    }
 }

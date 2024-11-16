@@ -63,9 +63,16 @@ class TourService : Service() {
 
     fun pauseTour() {
         Log.d("TourService", "Tour pausiert")
-    }
+        tourHelper.pauseTour()
 
-    fun skipToNextLocation() {
+    }
+    fun continueTour(){
+        tourHelper.continueTour()
+    }
+    fun skip() {
+        tourHelper.skip()
         Log.d("TourService", "Nächste Location übersprungen")
     }
+
+
 }

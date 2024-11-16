@@ -11,6 +11,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import android.view.View
+import android.webkit.WebChromeClient
+import android.webkit.WebView
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
@@ -24,6 +27,9 @@ import androidx.core.view.WindowInsetsCompat
 import com.robotemi.sdk.Robot
 import java.net.URL
 import kotlin.concurrent.thread
+import android.webkit.WebResourceRequest
+import android.webkit.WebViewClient
+
 
 class ExecutionActivity : AppCompatActivity() {
     private lateinit var tvDescription: TextView
@@ -34,6 +40,15 @@ class ExecutionActivity : AppCompatActivity() {
     private var isRunning = true
     private var isBound = false
     private var tourService: TourService? = null
+    private lateinit var wvAreaVideo: WebView
+    private val TAG = "ExecutionActivity"
+    private var isNavigationCompleted = false
+    private var isSpeechCompleted = false
+    private var isVideoCompleted = false
+
+
+
+
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -54,6 +69,9 @@ class ExecutionActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val spokenText = intent?.getStringExtra("EXTRA_SPOKEN_TEXT")
             tvDescription.text = spokenText
+            Log.d(TAG, "Text empfangen: $spokenText")
+            isSpeechCompleted = true
+            checkMovementAndSpeechStatus()
         }
     }
 
@@ -69,10 +87,11 @@ class ExecutionActivity : AppCompatActivity() {
             val mediaUrl = intent?.getStringExtra("EXTRA_MEDIA_URL")
             Log.d("ExecutionActivity", "Empfangene Media URL: $mediaUrl")
             mediaUrl?.let { url ->
-                loadImageFromUrl(url)
+                handleMedia(url) // Entscheidet zwischen Bild und Video
             }
         }
     }
+
 
     private val progressReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -93,6 +112,7 @@ class ExecutionActivity : AppCompatActivity() {
         ivAreaImage = findViewById(R.id.ivAreaImage)
         progressBar = findViewById(R.id.progressBar)
         mRobot = Robot.getInstance()
+        wvAreaVideo = findViewById(R.id.wvAreaVideo)
 
 
 
@@ -118,14 +138,17 @@ class ExecutionActivity : AppCompatActivity() {
         fun updateButtonState() {
             if (isRunning) {
                 btnPauseContinue.text = "Pause"
+                tourService?.pauseTour()
                 btnPauseContinue.setBackgroundColor(ContextCompat.getColor(this, R.color.pauseButton))  // Button auf Orange setzen
             } else {
                 btnPauseContinue.text = "Weiter"
+                tourService?.continueTour()
                 btnPauseContinue.setBackgroundColor(ContextCompat.getColor(this, R.color.continueButton))  // Button auf Grün setzen
             }
         }
 
         findViewById<Button>(R.id.btnPauseContinue).setOnClickListener {
+
             isRunning = !isRunning
             updateButtonState()
         }
@@ -138,7 +161,26 @@ class ExecutionActivity : AppCompatActivity() {
             tourService!!.endTour()
         }
     }
-    private fun loadImageFromUrl(url: String) {
+    private fun handleMedia(url: String) {
+        // Statusvariablen zurücksetzen
+        isNavigationCompleted = false
+        isSpeechCompleted = false
+        isVideoCompleted = false
+
+        if (url.endsWith(".mp4") || url.endsWith(".webm") || url.contains("youtube.com")) {
+            showVideo(url)
+        } else {
+            isVideoCompleted = true // Bilder erfordern keine weitere Aktion
+            checkMovementAndSpeechStatus() // Überprüfung starten
+            showImage(url)
+        }
+    }
+
+
+    private fun showImage(url: String) {
+        ivAreaImage.visibility = View.VISIBLE
+        wvAreaVideo.visibility = View.GONE
+
         thread {
             try {
                 Log.d("ExecutionActivity", "Lade Bild von URL: $url")
@@ -149,9 +191,66 @@ class ExecutionActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Log.e("ExecutionActivity", "Fehler beim Laden des Bildes von URL: $url", e)
+                runOnUiThread {
+                }
             }
         }
     }
+
+    private fun showVideo(url: String) {
+        ivAreaImage.visibility = View.GONE
+        wvAreaVideo.visibility = View.VISIBLE
+
+        wvAreaVideo.settings.javaScriptEnabled = true
+        wvAreaVideo.settings.mediaPlaybackRequiresUserGesture = false
+
+        wvAreaVideo.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean = false
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = false
+        }
+
+        wvAreaVideo.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                if (newProgress == 100) {
+                    Log.d(TAG, "Video geladen.")
+                }
+            }
+        }
+
+        if (url.contains("youtube.com")) {
+            val videoId = url.substringAfter("v=").substringBefore("&")
+            val embeddedUrl = "https://www.youtube.com/embed/$videoId?autoplay=1&enablejsapi=1"
+            wvAreaVideo.loadUrl(embeddedUrl)
+        } else {
+            wvAreaVideo.loadUrl("$url?autoplay=1")
+        }
+
+        // Callback für Videoende hinzufügen
+        wvAreaVideo.addJavascriptInterface(object {
+            @android.webkit.JavascriptInterface
+            fun onVideoEnded() {
+                runOnUiThread {
+                    Log.d(TAG, "Video beendet.")
+                    isVideoCompleted = true
+                    checkMovementAndSpeechStatus()
+                }
+            }
+        }, "Android")
+    }
+
+
+
+    private fun checkMovementAndSpeechStatus() {
+        if (isSpeechCompleted && isNavigationCompleted) {
+            Log.d(TAG, "Beides abgeschlossen. Navigiere zur nächsten Location.")
+            tourService?.continueTour()
+        } else {
+            Log.d(TAG, "Warte auf Abschluss: Sprechen: $isSpeechCompleted, Navigation: $isNavigationCompleted")
+        }
+    }
+
+
+
 
 
     override fun onDestroy() {
