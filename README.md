@@ -35,8 +35,7 @@ Falls neue Informationen geschickt werden werden die alten überschreiben und so
 Es können 0-5 Sterne für die Tour gegeben werden die Bewertung wird mit dem Format YYYY-MM-DD an der Location  /storage/emulated/0/Android/data/de.fhkiel.temi.robogguide/files/Documents/
 gespeichert Über Shell zugriff auf dem Roboter können die Datein eingesehen werden
 
-### 
-PopUpError
+### PopUpError
 Ein einfaches errorHandeling wo sich der User zwischen Erneut versuchen/ überspringen und Tour beenden entscheiden kann, falls eine Location nicht erreicht werden kann.
 
 ---
