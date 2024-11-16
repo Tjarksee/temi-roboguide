@@ -163,6 +163,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         Intent(this, TourService::class.java).also { intent ->
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
+
         Robot.getInstance().addOnRobotReadyListener(this)
         Robot.getInstance().addOnRequestPermissionResultListener(this)
     }
