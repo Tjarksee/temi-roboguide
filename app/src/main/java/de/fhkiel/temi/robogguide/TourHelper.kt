@@ -2,8 +2,6 @@ package de.fhkiel.temi.robogguide
 
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import com.robotemi.sdk.Robot
 import com.robotemi.sdk.TtsRequest
@@ -26,9 +24,8 @@ class TourHelper(private val context: Context):Robot.TtsListener {
     private val TAG = "TourHelper-Tour"
     private val maxRetries = 3
     private val retryDelayMillis = 5000L
-    private var locationStatusListener: OnGoToLocationStatusChangedListener? = null
+    private var locationStatusListenerManager: OnGoToLocationStatusChangedListener? = null
     private var paused = false
-
 
     init {
         mRobot = Robot.getInstance()
@@ -210,25 +207,50 @@ class TourHelper(private val context: Context):Robot.TtsListener {
         }
     }
 
-    private fun setLocationListener() {
-        locationStatusListener = object : OnGoToLocationStatusChangedListener {
-            override fun onGoToLocationStatusChanged(location: String, status: String, descriptionId: Int, description: String) {
-                Log.d(TAG, "Statusänderung bei $location - Status: $status, Beschreibung: $description")
+    // Definiere den Listener separat
+    private val locationStatusListener = object : OnGoToLocationStatusChangedListener {
+        override fun onGoToLocationStatusChanged(location: String, status: String, descriptionId: Int, description: String) {
+            Log.d(TAG, "Statusänderung bei $location - Status: $status, Beschreibung: $descriptionId")
 
-                when (status) {
-                    "complete" -> {
-                        retryCount = 0
-                        Log.i(TAG, "Standort erreicht: $location")
-                        isNavigationCompleted = true
-                        checkMovementAndSpeechStatus()
-                    }
-                    "abort" -> retryNavigation(location)
-                    else -> Log.d(TAG, "Nicht behandelter Status: $status bei $location")
+            when (descriptionId) {
+                1003, 1004, 1005, 1006, 1060, 2000, 2001, 2002,
+                2003, 2004, 2005, 2006, 2007, 2008, 2009 -> errorPopUp()
+                500 -> {
+                    retryCount = 0
+                    Log.i(TAG, "Standort erreicht: $location")
+                    isNavigationCompleted = true
+                    checkMovementAndSpeechStatus()
                 }
+                else -> Log.d(TAG, "Nicht behandelter Status: $status bei $location")
             }
         }
-        mRobot?.addOnGoToLocationStatusChangedListener(locationStatusListener!!)
     }
+
+    // Methode zum Setzen des Listeners
+    private fun setLocationListener() {
+        // Entferne den vorherigen Listener, falls vorhanden
+        locationStatusListenerManager?.let {
+            mRobot?.removeOnGoToLocationStatusChangedListener(it)
+        }
+
+        // Setze den aktuellen Listener als aktiven Listener im Manager
+        locationStatusListenerManager = locationStatusListener
+
+        // Registriere den neuen Listener
+        mRobot?.addOnGoToLocationStatusChangedListener(locationStatusListener)
+    }
+
+    // Optional: Wenn du den Listener entfernen möchtest
+    private fun removeLocationListener() {
+        locationStatusListenerManager?.let {
+            mRobot?.removeOnGoToLocationStatusChangedListener(it)
+        }
+
+        // Setze den Manager auf null, um den Listener zu löschen
+        locationStatusListenerManager = null
+    }
+
+
 
 
     // Navigiert zur nächsten Location in der Route und zeigt Fortschritt in der ProgressBar an
@@ -278,15 +300,7 @@ class TourHelper(private val context: Context):Robot.TtsListener {
     }
 
     private fun retryNavigation(location: String) {
-        if (retryCount < maxRetries) {
-            retryCount++
-            Log.w(TAG, "Navigation zu $location abgebrochen. Versuch $retryCount von $maxRetries.")
-            Handler(Looper.getMainLooper()).postDelayed({ mRobot?.goTo(location) }, retryDelayMillis)
-        } else {
-            retryCount = 0
-            Log.e(TAG, "Navigation zu $location nach $maxRetries Versuchen fehlgeschlagen. Weiter zur nächsten Location.")
-            navigateToNextLocation()
-        }
+            mRobot?.goTo(location)
     }
 
     private fun speakText(text: String, isShowOnConversationLayer: Boolean = false) {
@@ -322,7 +336,7 @@ class TourHelper(private val context: Context):Robot.TtsListener {
         route.clear()
         locationIndex = 0
         currentIndex = 0
-        locationStatusListener?.let { mRobot?.removeOnGoToLocationStatusChangedListener(it)}
+        removeLocationListener()
         atLocation = false
         mRobot?.goTo("home base")
     }
@@ -330,7 +344,7 @@ class TourHelper(private val context: Context):Robot.TtsListener {
     fun endTour() {
         Log.i(TAG, "Tour abgeschlossen.")
         mRobot?.removeTtsListener(this)
-        locationStatusListener?.let { mRobot?.removeOnGoToLocationStatusChangedListener(it)}
+        removeLocationListener()
         mRobot?.stopMovement()
         mRobot?.cancelAllTtsRequests()
         speakText("Die Tour ist jetzt abgeschlossen. Wenn du möchtest kannst du dir kurz die Zeit nehmen die Tour zu bewerten")
@@ -340,12 +354,13 @@ class TourHelper(private val context: Context):Robot.TtsListener {
     }
     fun pauseTour(){
         mRobot?.removeTtsListener(this)
-        locationStatusListener?.let { mRobot?.removeOnGoToLocationStatusChangedListener(it)}
+        removeLocationListener()
         mRobot?.stopMovement()
         mRobot?.cancelAllTtsRequests()
     }
     fun continueTour(){
         setLocationListener()
+
         mRobot?.addTtsListener(this)
         if(atLocation){
             locationIndex--
@@ -369,5 +384,31 @@ class TourHelper(private val context: Context):Robot.TtsListener {
             mRobot?.stopMovement()
             navigateToNextLocation()
         }
+    }
+
+    fun retryNavigationFromError(){
+        retryNavigation(route[currentIndex].name.toString())
+    }
+    fun onDestroy(){
+        Log.i(TAG, "TourHelper wird zerstört. Ressourcen werden freigegeben.")
+
+        mRobot?.removeTtsListener(this)
+        removeLocationListener()
+        mRobot?.stopMovement()
+        mRobot?.cancelAllTtsRequests()
+        database.closeDatabase()
+        route.clear()
+        retryCount = 0
+        atLocation = false
+        isSpeechCompleted = false
+        isNavigationCompleted = false
+        locationIndex = 0
+        currentIndex = 0
+    }
+    private fun errorPopUp(){
+        mRobot?.stopMovement()
+        val error = Intent("ACTION_UPDATE_POPUP")
+        mRobot?.cancelAllTtsRequests()
+        context.sendBroadcast(error)
     }
 }

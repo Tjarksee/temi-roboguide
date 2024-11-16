@@ -36,7 +36,6 @@ class TourService : Service() {
             Log.e("TourService", "Place ID ist nicht gesetzt. Tour kann nicht gestartet werden.")
             return
         }
-
         when (routeType) {
             "long" -> tourHelper.startLongTour(placeId)
             "short" -> tourHelper.startShortTour(placeId)
@@ -49,30 +48,36 @@ class TourService : Service() {
         tourHelper.setIndividualRoute(selectedItems)
     }
 
-    fun isRouteEmpty(): Boolean {
+    fun isRouteEmpty(): Boolean{
         return tourHelper.route.isNotEmpty()
     }
 
-    fun endTour() {
+    fun endTour(){
         tourHelper.endTour()
     }
 
-    fun reset() {
+    fun reset(){
         tourHelper.resetTour()
     }
-
     fun pauseTour() {
         Log.d("TourService", "Tour pausiert")
         tourHelper.pauseTour()
-
     }
+
     fun continueTour(){
         tourHelper.continueTour()
     }
+
+    fun retryNavigation(){
+        tourHelper.retryNavigationFromError()
+    }
+
     fun skip() {
         tourHelper.skip()
         Log.d("TourService", "Nächste Location übersprungen")
     }
-
-
+    override fun onDestroy() {
+        super.onDestroy()
+        tourHelper.onDestroy()
+    }
 }
