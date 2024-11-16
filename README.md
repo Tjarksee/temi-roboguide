@@ -40,16 +40,16 @@ Ein einfaches errorHandeling wo sich der User zwischen Erneut versuchen/ übersp
 
 ---
 
-TourService
+### TourService
 Der Tourservice verwaltet den TourHelper er ist als Service im Android Manifest regestriert. 
 Er dient dazu dass wir einen einhaltlichen zugriff auf den TourHelper haben
 
-TourHelper
+### TourHelper
 Im TourHelper wird die Tour geplant und ausgeführt heir befidnen sich auch die Movent und Tts Listener
 Er ordent außerdem die Tour in die richtiege Reihenfolge findet den Anfang der Tour heraus und dient generell als Logic des Programms
 In der Route werden eine geordnete liste der anzufahrenden Locations gespeichert die Location werden mit der Location-ID dem Namen und der dazugehöriegen Transfer-ID gespeichert
 Der TourHelper kümmert sich auch ums Error handeling hier wird falls ein error code beim MovmentListener recieved wird ein Error PopUp gestartet
 
-DatenbankHelper
+### DatenbankHelper
 Der DatenbankHelper ist zum größtenTeil gleichgeblieben es sind nur ein paar funktionen dazu gekommen die gezielt Texte und Bilder aus der Datenbank abfragen
 Wichtig beim erstellen der DatanbankHelper Klasse muss der Name der aktuellen Datenbank übergeben werden damit diese richtig geöffnet werden kann  
