@@ -1,5 +1,6 @@
 package de.fhkiel.temi.robogguide
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
@@ -211,18 +212,20 @@ class TourHelper(private val context: Context):Robot.TtsListener {
     private fun setLocationListener() {
         locationStatusListener = object : OnGoToLocationStatusChangedListener {
             override fun onGoToLocationStatusChanged(location: String, status: String, descriptionId: Int, description: String) {
-                Log.d(TAG, "Statusänderung bei $location - Status: $status, Beschreibung: $description")
+                Log.d(TAG, "Statusänderung bei $location - Status: $status, Beschreibung: $descriptionId")
 
-                when (status) {
-                    "complete" -> {
+                when (descriptionId) {
+                    1003,1004,1005,1006,1060,2000,2001,2002
+                        ,2003,2004,2005,2006,2007,2008,2009 -> retryNavigation(route[currentIndex].name.toString())
+                    500-> {
                         retryCount = 0
                         Log.i(TAG, "Standort erreicht: $location")
                         isNavigationCompleted = true
                         checkMovementAndSpeechStatus()
                     }
-                    "abort" -> retryNavigation(location)
                     else -> Log.d(TAG, "Nicht behandelter Status: $status bei $location")
                 }
+
             }
         }
         mRobot?.addOnGoToLocationStatusChangedListener(locationStatusListener!!)
@@ -282,8 +285,7 @@ class TourHelper(private val context: Context):Robot.TtsListener {
             Handler(Looper.getMainLooper()).postDelayed({ mRobot?.goTo(location) }, retryDelayMillis)
         } else {
             retryCount = 0
-            Log.e(TAG, "Navigation zu $location nach $maxRetries Versuchen fehlgeschlagen. Weiter zur nächsten Location.")
-            navigateToNextLocation()
+            errorPopUp()
         }
     }
 
@@ -335,6 +337,32 @@ class TourHelper(private val context: Context):Robot.TtsListener {
         val intent = Intent(context, RatingActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
+    }
+    private fun errorPopUp(){
+        Log.e("error","ichj bin im popup")
+        val builder = AlertDialog.Builder(context) // 'this' ist der Kontext, z. B. Activity
+        builder.setTitle("Navigation Error")
+        builder.setMessage("Möchten Sie die Navigation erneut versuchen oder zum nächsten Ziel springen?")
+
+        builder.setPositiveButton("Erneut versuchen") { dialog, _ ->
+            // Aktion für "Erneut versuchen"
+            //retryNavigation()
+            dialog.dismiss()
+        }
+
+        builder.setNegativeButton("Überspringen") { dialog, _ ->
+            // Aktion für "Überspringen"
+            //skipToNext()
+            dialog.dismiss()
+        }
+
+        builder.setNeutralButton("Abbrechen") { dialog, _ ->
+            // Optionale Aktion für "Abbrechen" oder nur den Dialog schließen
+            dialog.dismiss()
+        }
+        val dialog = builder.create()
+        dialog.show()
+
     }
 
 }
