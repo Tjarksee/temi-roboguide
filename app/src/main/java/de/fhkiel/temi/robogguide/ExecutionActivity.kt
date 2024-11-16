@@ -1,5 +1,6 @@
 package de.fhkiel.temi.robogguide
 
+import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -11,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import android.view.LayoutInflater
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
@@ -31,7 +33,7 @@ class ExecutionActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var tvHeading: TextView
     private var mRobot: Robot? = null
-    private var isRunning = true
+    private var isRunning = false
     private var isBound = false
     private var tourService: TourService? = null
 
@@ -81,6 +83,12 @@ class ExecutionActivity : AppCompatActivity() {
         }
     }
 
+    private val errorPopUpReceiver = object : BroadcastReceiver(){
+        override fun onReceive(context: Context?, intent: Intent?) {
+            errorPopUp()
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,8 +112,10 @@ class ExecutionActivity : AppCompatActivity() {
         registerReceiver(mediaReceiver, IntentFilter("ACTION_UPDATE_MEDIA"),
             RECEIVER_NOT_EXPORTED)
         registerReceiver(progressReceiver, IntentFilter("ACTION_UPDATE_PROGRESS"),
-            RECEIVER_NOT_EXPORTED
-        )
+            RECEIVER_NOT_EXPORTED)
+        registerReceiver(errorPopUpReceiver, IntentFilter("ACTION_UPDATE_POPUP"),
+            RECEIVER_NOT_EXPORTED)
+
 
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.execution_view)) { v, insets ->
@@ -115,19 +125,17 @@ class ExecutionActivity : AppCompatActivity() {
         }
 
         val btnPauseContinue: Button = findViewById(R.id.btnPauseContinue)
-        fun updateButtonState() {
-            if (isRunning) {
-                btnPauseContinue.text = "Pause"
-                btnPauseContinue.setBackgroundColor(ContextCompat.getColor(this, R.color.pauseButton))  // Button auf Orange setzen
-            } else {
-                btnPauseContinue.text = "Weiter"
-                btnPauseContinue.setBackgroundColor(ContextCompat.getColor(this, R.color.continueButton))  // Button auf Grün setzen
-            }
-        }
-
         findViewById<Button>(R.id.btnPauseContinue).setOnClickListener {
-            isRunning = !isRunning
-            updateButtonState()
+            if (!isRunning) {
+                btnPauseContinue.text = "Weiter"
+                btnPauseContinue.setBackgroundColor(ContextCompat.getColor(this, R.color.continueButton))
+                isRunning = true
+
+            } else {
+                btnPauseContinue.text = "Pause"
+                btnPauseContinue.setBackgroundColor(ContextCompat.getColor(this, R.color.pauseButton))
+                isRunning = false
+            }
         }
 
         findViewById<Button>(R.id.btnSkip).setOnClickListener {
@@ -152,11 +160,35 @@ class ExecutionActivity : AppCompatActivity() {
             }
         }
     }
+    private fun errorPopUp() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.popup_error, null)
+
+        val builder = AlertDialog.Builder(this)
+        builder.setView(dialogView)
+
+        val dialog = builder.create()
+
+        dialogView.findViewById<Button>(R.id.btn_retry).setOnClickListener {
+            dialog.dismiss()
+            tourService?.retryNavigation()
+        }
+
+        dialogView.findViewById<Button>(R.id.btn_skip).setOnClickListener {
+            dialog.dismiss()
+            tourService?.skip()
+        }
+
+        dialogView.findViewById<Button>(R.id.btn_cancel).setOnClickListener {
+            dialog.dismiss()
+            tourService?.endTour()
+        }
+
+        dialog.show()
+    }
 
 
     override fun onDestroy() {
         super.onDestroy()
-        // Unregister the receiver to avoid memory leaks
         unregisterReceiver(headingReceiver)
         unregisterReceiver(textReceiver)
         unregisterReceiver(mediaReceiver)

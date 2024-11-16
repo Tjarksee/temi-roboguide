@@ -68,6 +68,10 @@ class TourService : Service() {
         tourHelper.continueTour()
     }
 
+    fun retryNavigation(){
+        tourHelper.retryNavigationFromError()
+    }
+
     fun skip() {
         tourHelper.skip()
         Log.d("TourService", "Nächste Location übersprungen")
