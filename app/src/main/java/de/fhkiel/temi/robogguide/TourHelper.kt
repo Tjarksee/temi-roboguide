@@ -26,6 +26,8 @@ class TourHelper(private val context: Context):Robot.TtsListener {
     private val retryDelayMillis = 5000L
     private var locationStatusListenerManager: OnGoToLocationStatusChangedListener? = null
     private var paused = false
+    private var isVideoCompleted = true
+
 
     init {
         mRobot = Robot.getInstance()
@@ -286,18 +288,23 @@ class TourHelper(private val context: Context):Robot.TtsListener {
             speakWithoutListener("navigiere zu ${nextLocation.name}")
 
             mRobot?.goTo(nextLocation.name.toString())
-        } else {
+        } else if (currentIndex >= route.size && isVideoCompleted) {
             endTour()
         }
     }
 
 
     private fun checkMovementAndSpeechStatus() {
-        if (isSpeechCompleted && isNavigationCompleted && !atLocation) {
+        Log.d(TAG, "Status prüfen: Speech=$isSpeechCompleted, Navigation=$isNavigationCompleted, Video=$isVideoCompleted")
+        if (isSpeechCompleted && isNavigationCompleted && isVideoCompleted && !atLocation) {
+            Log.d(TAG, "Alle Bedingungen erfüllt. Fahre mit der Tour fort.")
             atLocation = true
             activityForLocation()
+        } else {
+            Log.d(TAG, "Warte auf weitere Aktionen. Status: Speech=$isSpeechCompleted, Navigation=$isNavigationCompleted, Video=$isVideoCompleted")
         }
     }
+
 
     private fun retryNavigation(location: String) {
             mRobot?.goTo(location)
@@ -389,6 +396,18 @@ class TourHelper(private val context: Context):Robot.TtsListener {
     fun retryNavigationFromError(){
         retryNavigation(route[currentIndex].name.toString())
     }
+    fun setSpeechStatus(isCompleted: Boolean) {
+        isSpeechCompleted = isCompleted
+        checkMovementAndSpeechStatus()
+    }
+
+    fun setVideoStatus(isCompleted: Boolean) {
+        Log.d(TAG, "Video-Status aktualisiert: $isCompleted")
+        isVideoCompleted = isCompleted
+        checkMovementAndSpeechStatus()
+    }
+
+
     fun onDestroy(){
         Log.i(TAG, "TourHelper wird zerstört. Ressourcen werden freigegeben.")
 
@@ -396,7 +415,6 @@ class TourHelper(private val context: Context):Robot.TtsListener {
         removeLocationListener()
         mRobot?.stopMovement()
         mRobot?.cancelAllTtsRequests()
-        database.closeDatabase()
         route.clear()
         retryCount = 0
         atLocation = false

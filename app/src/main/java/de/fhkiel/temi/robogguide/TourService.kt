@@ -76,8 +76,18 @@ class TourService : Service() {
         tourHelper.skip()
         Log.d("TourService", "Nächste Location übersprungen")
     }
+    fun updateVideoStatus(isCompleted: Boolean) {
+        Log.d("TourService", "updateVideoStatus: $isCompleted wird an TourHelper weitergeleitet.")
+        tourHelper.setVideoStatus(isCompleted)
+    }
+
+
+    fun updateSpeechStatus(isCompleted: Boolean) {
+        tourHelper.setSpeechStatus(isCompleted)
+    }
+
+
     override fun onDestroy() {
         super.onDestroy()
-        tourHelper.onDestroy()
     }
 }

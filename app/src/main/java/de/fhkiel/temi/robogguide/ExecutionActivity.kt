@@ -72,10 +72,11 @@ class ExecutionActivity : AppCompatActivity() {
             val spokenText = intent?.getStringExtra("EXTRA_SPOKEN_TEXT")
             tvDescription.text = spokenText
             Log.d(TAG, "Text empfangen: $spokenText")
-            isSpeechCompleted = true
-            checkMovementAndSpeechStatus()
+            tourService?.updateSpeechStatus(true)
         }
     }
+
+
 
     private val headingReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -232,18 +233,20 @@ class ExecutionActivity : AppCompatActivity() {
             wvAreaVideo.loadUrl("$url?autoplay=1")
         }
 
-        // Callback für Videoende hinzufügen
+        tourService?.updateVideoStatus(false)
+
         wvAreaVideo.addJavascriptInterface(object {
             @android.webkit.JavascriptInterface
             fun onVideoEnded() {
                 runOnUiThread {
                     Log.d(TAG, "Video beendet.")
-                    isVideoCompleted = true
-                    checkMovementAndSpeechStatus()
+                    tourService?.updateVideoStatus(true)
                 }
             }
         }, "Android")
+
     }
+
 
 
 
