@@ -262,29 +262,35 @@ class ExecutionActivity : AppCompatActivity() {
 
 
     private fun errorPopUp() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.popup_error, null)
+        runOnUiThread {try{
+            val dialogView = LayoutInflater.from(this).inflate(R.layout.popup_error, null)
 
-        val builder = AlertDialog.Builder(this)
-        builder.setView(dialogView)
+            val builder = AlertDialog.Builder(this)
+            builder.setView(dialogView)
 
-        val dialog = builder.create()
+            val dialog = builder.create()
 
-        dialogView.findViewById<Button>(R.id.btn_retry).setOnClickListener {
-            dialog.dismiss()
-            tourService?.retryNavigation()
+            dialog.show()
+
+            dialogView.findViewById<Button>(R.id.btn_retry).setOnClickListener {
+                dialog.dismiss()
+                tourService?.retryNavigation()
+            }
+
+            dialogView.findViewById<Button>(R.id.btn_skip).setOnClickListener {
+                dialog.dismiss()
+                tourService?.skip()
+            }
+
+            dialogView.findViewById<Button>(R.id.btn_cancel).setOnClickListener {
+                dialog.dismiss()
+                tourService?.endTour()
+        } }catch (e: Exception) {
+            Log.e("DialogError", "Error showing dialog: ${e.message}")
+
+
         }
-
-        dialogView.findViewById<Button>(R.id.btn_skip).setOnClickListener {
-            dialog.dismiss()
-            tourService?.skip()
         }
-
-        dialogView.findViewById<Button>(R.id.btn_cancel).setOnClickListener {
-            dialog.dismiss()
-            tourService?.endTour()
-        }
-
-        dialog.show()
     }
 
 
