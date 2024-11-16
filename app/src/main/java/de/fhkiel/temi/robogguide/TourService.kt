@@ -76,8 +76,4 @@ class TourService : Service() {
         tourHelper.skip()
         Log.d("TourService", "Nächste Location übersprungen")
     }
-    override fun onDestroy() {
-        super.onDestroy()
-        tourHelper.onDestroy()
-    }
 }

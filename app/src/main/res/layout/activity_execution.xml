@@ -58,15 +58,29 @@
             android:padding="8dp"
             android:text="@string/beschreibung_des_aktuellen_bereichs" />
 
-        <ImageView
-            android:id="@+id/ivAreaImage"
+        <!-- Container für ImageView und WebView -->
+        <FrameLayout
+            android:id="@+id/mediaContainer"
             android:layout_width="0dp"
             android:layout_height="450dp"
-            android:layout_marginStart="16dp"
-            android:layout_weight="1"
-            android:contentDescription="Bild"
-            android:scaleType="centerCrop"
-             />
+            android:layout_weight="1">
+
+            <!-- ImageView für Bilder -->
+            <ImageView
+                android:id="@+id/ivAreaImage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="Bild"
+                android:scaleType="centerCrop"
+                android:visibility="visible" />
+
+            <!-- WebView für Videos -->
+            <WebView
+                android:id="@+id/wvAreaVideo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+        </FrameLayout>
     </LinearLayout>
 
     <ProgressBar
