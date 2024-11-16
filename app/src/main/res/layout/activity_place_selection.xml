@@ -1,0 +1,27 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/tvSelectPlace"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wähle einen Ort:"
+        android:textSize="20sp"
+        android:layout_marginBottom="16dp" />
+
+    <ListView
+        android:id="@+id/lvPlaces"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btnConfirmPlace"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Bestätigen"
+        android:enabled="false"
+        android:layout_marginTop="16dp" />
+</LinearLayout>

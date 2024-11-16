@@ -164,13 +164,12 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
         return Pair(columns, primaryKey)
     }
 
-    fun getLocationDataAsJson(): Map<String, JSONObject> {
-        val jsonMap = getTableDataAsJsonWithQuery(
-            "locations",
-            "SELECT * FROM `locations` WHERE places_id='2'"
-        )
+    fun getLocationDataAsJson(placeId: Int): Map<String, JSONObject> {
+        val query = "SELECT * FROM `locations` WHERE places_id='$placeId'"
+        val jsonMap = getTableDataAsJsonWithQuery("locations", query)
         return jsonMap
     }
+
     fun getTransferDataAsJson(): Map<String, JSONObject> {
         val jsonMap = getTableDataAsJsonWithQuery(
             "transfers",
@@ -255,18 +254,19 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
         return locations.values.firstOrNull()?.optString("name", "")?.lowercase() ?: ""
     }
 
-    fun getImportantLocations(): Collection<JSONObject>{
-        val query = "SELECT * FROM locations WHERE important = 1"
+    fun getImportantLocations(placeId: Int): Collection<JSONObject> {
+        val query = "SELECT * FROM locations WHERE important = 1 AND places_id = '$placeId'"
         return getTableDataAsJsonWithQuery("locations", query).values
     }
+
 
     fun getItems(locationsId: String): List<JSONObject?>{
         val query = "SELECT * FROM items WHERE locations_id = $locationsId"
         return getTableDataAsJsonWithQuery("items",query).values.toList()
     }
 
-    fun getLocations(): Collection<JSONObject?> {
-        val query = "SELECT * FROM locations"
+    fun getLocations(placeId: Int): Collection<JSONObject> {
+        val query = "SELECT * FROM locations WHERE places_id = '$placeId'"
         return getTableDataAsJsonWithQuery("locations", query).values
     }
 
@@ -290,7 +290,15 @@ class DatabaseHelper(context: Context, private val databaseName: String) : SQLit
         return mediaData.values.firstOrNull()?.optString("url", null)
     }
 
+    fun getAllPlaces(): Map<String, JSONObject> {
+        val query = "SELECT * FROM places"
+        return getTableDataAsJsonWithQuery("places", query)
+    }
 
+    fun getPlaceIdByName(placeName: String): Int? {
+        val query = "SELECT * FROM places WHERE name = '$placeName'"
+        return getTableDataAsJsonWithQuery("places", query).values.firstOrNull()?.optInt("id")
+    }
 
 
 }

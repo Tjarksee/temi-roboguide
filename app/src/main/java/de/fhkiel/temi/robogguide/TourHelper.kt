@@ -47,8 +47,8 @@ class TourHelper(private val context: Context):Robot.TtsListener {
         Log.d(TAG, "setIndividualRoute aufgerufen mit ${selectedLocationIds.size} Standorten.")
     }
 
-    fun startLongTour() {
-        val listOfLocations = database.getLocations()
+    fun startLongTour(placeId: Int) {
+        val listOfLocations = database.getLocations(placeId)
         for (location in listOfLocations) {
             val transferId = location?.get("id")?.let { database.getTransferId(it.toString()) }
             route.add(Location(location?.get("name").toString(), transferId, location?.get("id").toString()))
@@ -59,8 +59,8 @@ class TourHelper(private val context: Context):Robot.TtsListener {
         startTour()
     }
 
-    fun startShortTour() {
-        val listOfLocations = database.getImportantLocations()
+    fun startShortTour(placeId: Int) {
+        val listOfLocations = database.getImportantLocations(placeId)
         for (location in listOfLocations) {
             val transferId = database.getTransferId(location.get("id").toString())
             route.add(Location(location.get("name").toString(), transferId, location.get("id").toString()))

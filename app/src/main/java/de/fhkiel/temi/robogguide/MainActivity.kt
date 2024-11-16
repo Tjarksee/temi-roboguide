@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
@@ -28,6 +29,8 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
     private lateinit var database: DatabaseHelper
     private var tourLengthGroupSelected = false
     private var textLengthGroupSelected = false
+    private lateinit var sharedPreferences: SharedPreferences
+
     private val TAG = "MainActivity-Tour"
 
     private val singleThreadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
@@ -38,6 +41,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         val tourLengthGroup = findViewById<RadioGroup>(R.id.tourLengthRadioGroup)
         val textLengthGroup = findViewById<RadioGroup>(R.id.textLengthRadioGroup)
         val startTourButton = findViewById<Button>(R.id.btnStartTour)
+        sharedPreferences = getSharedPreferences("AppPreferences", MODE_PRIVATE)
         // ---- DATABASE ACCESS ----
         val databaseName = "roboguide.db"
         database = DatabaseHelper.getInstance(this, databaseName)
@@ -60,6 +64,20 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         val transfers = database.getTransferDataAsJson()
         Log.d("MainActivity", "Loaded transfers from DB: $transfers")
 
+// Check if PLACE_ID is set
+        val placeId = sharedPreferences.getInt("PLACE_ID", -1)
+        if (placeId == -1) {
+            // Redirect to PlaceSelectionActivity if PLACE_ID is not set
+            redirectToPlaceSelection()
+        } else {
+            Log.i(TAG, "PLACE_ID geladen: $placeId")
+        }
+        // Button to switch back to PlaceSelectionActivity
+        findViewById<Button>(R.id.btnBackToSelection).setOnClickListener {
+            sharedPreferences.edit().remove("PLACE_ID").apply()
+            redirectToPlaceSelection()
+        }
+
 
 
         findViewById<Button>(R.id.btnStartTour).setOnClickListener {
@@ -80,7 +98,15 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         }
 
         findViewById<Button>(R.id.btnList).setOnClickListener {
-            val locations = database.getLocationDataAsJson()
+            val placeId = sharedPreferences.getInt("PLACE_ID", -1)
+            if (placeId == -1) {
+                Log.e(TAG, "PLACE_ID ist nicht gesetzt. Redirecting to PlaceSelectionActivity.")
+                redirectToPlaceSelection()
+                return@setOnClickListener
+            }
+
+            val locations = database.getLocationDataAsJson(placeId)
+            Log.d(TAG, "Gefilterte Locations für placeId $placeId: $locations")
             val intent = IndividualGuideActivity.newIntent(this, locations)
             startActivity(intent)
         }
@@ -96,11 +122,27 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
     }
 
+    private fun redirectToPlaceSelection() {
+        val intent = Intent(this, PlaceSelectionActivity::class.java)
+        startActivity(intent)
+        finish()
+    }
+
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             val binder = service as TourService.TourBinder
             tourService = binder.getService()
             isBound = true
+
+            // PLACE_ID aus SharedPreferences laden
+            val placeId = sharedPreferences.getInt("PLACE_ID", -1)
+            if (placeId != -1) {
+                // PLACE_ID an TourService übergeben
+                tourService?.setPlaceId(placeId)
+                Log.d(TAG, "Place ID an TourService übergeben: $placeId")
+            } else {
+                Log.e(TAG, "PLACE_ID nicht gefunden.")
+            }
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
@@ -108,6 +150,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
             tourService = null
         }
     }
+
 
     private fun checkIfBothSelected(nextButton: Button) {
         if (tourLengthGroupSelected && textLengthGroupSelected) {
@@ -124,6 +167,7 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
         Robot.getInstance().addOnRequestPermissionResultListener(this)
     }
 
+
     override fun onStop() {
         super.onStop()
         if (isBound) {
@@ -136,7 +180,6 @@ class MainActivity : AppCompatActivity(), OnRobotReadyListener, OnRequestPermiss
 
     override fun onDestroy() {
         super.onDestroy()
-        database.closeDatabase()
     }
 
     override fun onRobotReady(isReady: Boolean) {

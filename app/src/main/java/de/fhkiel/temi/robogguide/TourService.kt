@@ -10,6 +10,7 @@ class TourService : Service() {
 
     private val binder = TourBinder()
     private lateinit var tourHelper: TourHelper
+    private var placeId: Int = -1 // Standardwert, wenn PLACE_ID nicht gesetzt ist
 
     inner class TourBinder : Binder() {
         fun getService(): TourService = this@TourService
@@ -25,37 +26,46 @@ class TourService : Service() {
         return binder
     }
 
+    fun setPlaceId(id: Int) {
+        placeId = id
+        Log.d("TourService", "Place ID gesetzt: $placeId")
+    }
+
     fun startTour(routeType: String) {
+        if (placeId == -1) {
+            Log.e("TourService", "Place ID ist nicht gesetzt. Tour kann nicht gestartet werden.")
+            return
+        }
+
         when (routeType) {
-            "long" -> tourHelper.startLongTour()
-            "short" -> tourHelper.startShortTour()
+            "long" -> tourHelper.startLongTour(placeId)
+            "short" -> tourHelper.startShortTour(placeId)
             "individual" -> tourHelper.startTour()
             else -> Log.e("TourService", "Unbekannter Routentyp: $routeType")
         }
     }
 
-    fun setIndividualRoute( selectedItems: MutableList<String>){
+    fun setIndividualRoute(selectedItems: MutableList<String>) {
         tourHelper.setIndividualRoute(selectedItems)
     }
 
-    fun isRouteEmpty(): Boolean{
+    fun isRouteEmpty(): Boolean {
         return tourHelper.route.isNotEmpty()
     }
 
-    fun endTour(){
+    fun endTour() {
         tourHelper.endTour()
     }
 
-    fun reset(){
+    fun reset() {
         tourHelper.resetTour()
     }
-    fun pauseTour() {
 
+    fun pauseTour() {
         Log.d("TourService", "Tour pausiert")
     }
 
     fun skipToNextLocation() {
-
         Log.d("TourService", "Nächste Location übersprungen")
     }
 }

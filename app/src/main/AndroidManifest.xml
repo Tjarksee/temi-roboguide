@@ -28,6 +28,9 @@
         <activity
             android:name=".IndividualGuideActivity"
             android:exported="false" />
+        <activity android:name=".PlaceSelectionActivity"
+            android:exported="false"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
