@@ -163,7 +163,7 @@ class ExecutionActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btnSkip).setOnClickListener {
-            //to Do
+            tourService!!.skip()
         }
 
         findViewById<Button>(R.id.btnExit).setOnClickListener {
@@ -239,9 +239,9 @@ class ExecutionActivity : AppCompatActivity() {
                             height: '100%',
                             width: '100%',
                             videoId: '$videoId',
-                             playerVars: {
-                                'autoplay': 1, 
-                                'controls': 1 
+                            playerVars: {
+                                'autoplay': 1,
+                                'controls': 1
                             },
                             events: {
                                 'onStateChange': onPlayerStateChange
@@ -259,6 +259,10 @@ class ExecutionActivity : AppCompatActivity() {
                 </html>
             """.trimIndent()
 
+                // Update Video-Status auf "nicht abgeschlossen" und Navigation anhalten
+                isVideoCompleted = false
+                tourService?.updateVideoStatus(false)
+
                 // HTML in WebView laden
                 wvAreaVideo.loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "utf-8", null)
             } else {
@@ -267,11 +271,8 @@ class ExecutionActivity : AppCompatActivity() {
         } else {
             Log.d(TAG, "Kein YouTube-Video erkannt.")
         }
-
-        // Setze den Video-Status auf "nicht abgeschlossen"
-        isVideoCompleted = false
-        tourService?.updateVideoStatus(false)
     }
+
     private fun extractYouTubeVideoId(url: String): String? {
         return try {
             val videoId = url.substringAfter("v=").substringBefore("&")
@@ -288,13 +289,16 @@ class ExecutionActivity : AppCompatActivity() {
 
 
     fun checkMovementAndSpeechStatus() {
-        if (isSpeechCompleted && isNavigationCompleted) {
-            Log.d(TAG, "Beides abgeschlossen. Navigiere zur nächsten Location.")
+        Log.d(TAG, "Status prüfen: Speech=$isSpeechCompleted, Navigation=$isNavigationCompleted, Video=$isVideoCompleted")
+
+        if (isSpeechCompleted && isNavigationCompleted && isVideoCompleted) {
+            Log.d(TAG, "Alle Bedingungen erfüllt. Navigiere zur nächsten Location.")
             tourService?.continueTour()
         } else {
-            Log.d(TAG, "Warte auf Abschluss: Sprechen: $isSpeechCompleted, Navigation: $isNavigationCompleted")
+            Log.d(TAG, "Warte auf Abschluss: Speech=$isSpeechCompleted, Navigation=$isNavigationCompleted, Video=$isVideoCompleted")
         }
     }
+
 
 
 
