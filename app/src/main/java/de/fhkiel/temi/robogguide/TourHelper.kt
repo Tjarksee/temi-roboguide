@@ -272,6 +272,10 @@ class TourHelper(private val context: Context):Robot.TtsListener {
                 context.sendBroadcast(text)
                 context.sendBroadcast(heading)
                 context.sendBroadcast(media)
+                isNavigationCompleted = false
+                isSpeechCompleted = false
+                speakWithoutListener("navigiere zu ${nextLocation.name}")
+                speakText(transferText["text"].toString())
 
             }
             val progress = ((currentIndex + 1) * 100) / totalLocations
@@ -279,9 +283,7 @@ class TourHelper(private val context: Context):Robot.TtsListener {
             intent.putExtra("EXTRA_PROGRESS", progress)
             context.sendBroadcast(intent)
             Log.i(TAG, "Navigiere zur nächsten Location: ${nextLocation.name}")
-            isNavigationCompleted = false
-            isSpeechCompleted = false
-            speakWithoutListener("navigiere zu ${nextLocation.name}")
+
 
             mRobot?.goTo(nextLocation.name.toString())
         } else {
